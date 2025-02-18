@@ -59,9 +59,6 @@ pub fn lex(input: String) -> Result<Vec<Token>, String> {
         } else if could_be(c, ":,") {
             tokens.push(Token { kind: "punctuation", value: TokenValue::Punctuation(c) });
             cur += 1;
-        } else if c == '\n' {
-            tokens.push(Token { kind: "newline", value: TokenValue::Punctuation(c) });
-            cur += 1;
         } else if c.is_whitespace() {
             cur += 1;
         } else {

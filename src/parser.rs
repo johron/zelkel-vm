@@ -1,13 +1,13 @@
 use crate::lexer::{Token, TokenValue};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum ValueType {
     Integer(i32),
     Float(f32),
     String(String),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum InstructionKind {
     Push(),
     Add,
@@ -18,19 +18,19 @@ pub enum InstructionKind {
     Pop,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Instruction {
     pub kind: InstructionKind,
     pub params: Vec<ValueType>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum NodeKind {
     Instruction(Instruction),
     Block(Vec<Node>),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Node {
     pub kind: NodeKind,
 }
@@ -44,75 +44,76 @@ fn current<'a>(tokens: &'a Vec<Token>, i: &usize) -> Option<&'a Token> {
 }
 
 fn next<'a>(tokens: &'a Vec<Token>, i: &mut usize) -> Option<(&'a Token, usize)> {
-    if *i < tokens.len() {
-        *i += 1;
-        let tok = &tokens[*i];
-        Some((tok, *i))
-    } else {
-        None
-    }
+    *i += 1;
+    let tok = current(tokens, i);
+    Some((tok?, *i))
 }
 
 fn parse_identifier(tokens: &Vec<Token>, i: &mut usize) -> Result<(Node, usize), String> {
     let token = current(tokens, i).unwrap();
 
-    match token.value {
-        TokenValue::Identifier(ref s) => match s.as_str() {
-            "push" => {
-                let next = next(tokens, i).unwrap();
-                *i = next.1;
-                let value = match &next.0.value {
-                    TokenValue::Integer(i) => ValueType::Integer(*i),
-                    TokenValue::Float(f) => ValueType::Float(*f),
-                    TokenValue::String(s) => ValueType::String(s.to_string()),
-                    _ => {
-                        return Err(format!("Unexpected value type: {:?}", next.0.value));
-                    }
-                };
-
-                Ok(
-                    (Node {
-                        kind: NodeKind::Instruction(Instruction {
-                            kind: InstructionKind::Push(),
-                            params: vec![value],
-                        }),
-                    }, *i)
-                )
-            },
+    if token.value == TokenValue::Identifier("push".to_string()) {
+        let next_token = next(tokens, i).unwrap();
+        let value = &next_token.0.value;
+        let value = match value {
+            TokenValue::Integer(i) => ValueType::Integer(*i),
+            TokenValue::Float(f) => ValueType::Float(*f),
+            TokenValue::String(s) => ValueType::String(s.to_string()),
             _ => {
-                Err(format!("Unexpected identifier: {}", s))
+                return Err("Invalid value".to_string());
             }
-        }
-        _ => {
-            Err(format!("Expected identifier: {:?}", token))
-        }
+        };
+
+        let instruction = Instruction {
+            kind: InstructionKind::Push(),
+            params: vec![value],
+        };
+
+        let node = Node {
+            kind: NodeKind::Instruction(instruction),
+        };
+
+        Ok((node, next_token.1))
+    } else {
+        let kind = match token.value {
+            TokenValue::Identifier(ref s) if s == "add" => InstructionKind::Add,
+            TokenValue::Identifier(ref s) if s == "sub" => InstructionKind::Sub,
+            TokenValue::Identifier(ref s) if s == "mul" => InstructionKind::Mul,
+            TokenValue::Identifier(ref s) if s == "div" => InstructionKind::Div,
+            _ => return Err("Invalid identifier".to_string()),
+        };
+
+        let instruction = Instruction {
+            kind,
+            params: vec![],
+        };
+
+        let node = Node {
+            kind: NodeKind::Instruction(instruction),
+        };
+
+        Ok((node, *i))
     }
 }
 
-pub fn parse(tokens: Vec<Token>) -> Vec<Node> {
+pub fn parse(tokens: Vec<Token>) -> Result<Vec<Node>, String> {
     let mut nodes: Vec<Node> = Vec::new();
     let mut i = 0;
 
-    loop {
-        println!("{}", i);
-        if i >= tokens.len() {
-            break;
-        }
-
+    while i < tokens.len() {
         let t = current(&tokens, &mut i).unwrap();
 
         match t.kind {
             "identifier" => {
                 let parsed = parse_identifier(&tokens, &mut i).expect("Failed to parse identifier");
                 nodes.push(parsed.0);
-                i = parsed.1;
+                i = parsed.1 + 1;
             }
             _ => {
-                eprintln!("Unexpected token1: {:?}", t);
+                return Err("Unexpected token".to_string());
             }
         }
-
     }
 
-    nodes
+    Ok(nodes)
 }

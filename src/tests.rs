@@ -99,3 +99,29 @@ fn parse_add() {
         },
     ]));
 }
+
+#[test]
+fn evaluate_5_plus_3() {
+    let nodes = vec![
+        parser::Node {
+            kind: parser::NodeKind::Instruction(parser::Instruction {
+                kind: parser::InstructionKind::Push(),
+                params: vec![parser::ValueType::Integer(5)],
+            }),
+        },
+        parser::Node {
+            kind: parser::NodeKind::Instruction(parser::Instruction {
+                kind: parser::InstructionKind::Push(),
+                params: vec![parser::ValueType::Integer(3)],
+            }),
+        },
+        parser::Node {
+            kind: parser::NodeKind::Instruction(parser::Instruction {
+                kind: parser::InstructionKind::Add,
+                params: vec![],
+            }),
+        },
+    ];
+    let result = evaluator::evaluate(nodes);
+    assert_eq!(result, Ok(vec![parser::ValueType::Integer(8)]));
+}

@@ -3,14 +3,14 @@ mod lexer;
 
 fn main() {
     let code = String::from(r#"
-push 5
-push 3
-add
+push 32
+push 24
+mod
 "#);
     let tokens = lexer::lex(code).expect("Failed to lex");
-    println!("{:?}", tokens);
     let nodes = parser::parse(tokens);
-    println!("{:?}", nodes);
+    let stack = evaluator::evaluate(nodes.unwrap()).expect("Failed to evaluate");
+    println!("{:?}", stack);
 }
 
 #[cfg(test)]

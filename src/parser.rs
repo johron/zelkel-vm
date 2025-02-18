@@ -80,6 +80,7 @@ fn parse_identifier(tokens: &Vec<Token>, i: &mut usize) -> Result<(Node, usize),
             TokenValue::Identifier(ref s) if s == "sub" => InstructionKind::Sub,
             TokenValue::Identifier(ref s) if s == "mul" => InstructionKind::Mul,
             TokenValue::Identifier(ref s) if s == "div" => InstructionKind::Div,
+            TokenValue::Identifier(ref s) if s == "mod" => InstructionKind::Mod,
             _ => return Err("Invalid identifier".to_string()),
         };
 

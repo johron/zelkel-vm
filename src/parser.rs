@@ -17,6 +17,7 @@ pub enum InstructionKind {
     Mod,
     Pop,
     Print,
+    Input,
 }
 
 #[derive(Debug, PartialEq)]
@@ -83,6 +84,7 @@ fn parse_identifier(tokens: &Vec<Token>, i: &mut usize) -> Result<(Node, usize),
             TokenValue::Identifier(ref s) if s == "div" => InstructionKind::Div,
             TokenValue::Identifier(ref s) if s == "mod" => InstructionKind::Mod,
             TokenValue::Identifier(ref s) if s == "print" => InstructionKind::Print,
+            TokenValue::Identifier(ref s) if s == "input" => InstructionKind::Input,
             _ => return Err("Invalid identifier".to_string()),
         };
 

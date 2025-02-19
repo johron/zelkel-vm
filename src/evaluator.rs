@@ -1,3 +1,5 @@
+use std::io::Write;
+use std::io;
 use crate::parser::{Node, NodeKind, ValueType, InstructionKind};
 
 pub fn evaluate(nodes: Vec<Node>) -> Result<Vec<ValueType>, String> {
@@ -100,6 +102,13 @@ pub fn evaluate(nodes: Vec<Node>) -> Result<Vec<ValueType>, String> {
                             }
                         }
                     },
+                    InstructionKind::Input => {
+                        io::stdout().flush().expect("Failed to flush stdout");
+                        let mut input = String::new();
+                        io::stdin().read_line(&mut input).expect("Failed to read line");
+                        let input = input.trim().to_string();
+                        stack.push(ValueType::String(input));
+                    }
                 }
             },
             NodeKind::Block(nodes) => {

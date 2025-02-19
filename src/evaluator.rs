@@ -19,6 +19,12 @@ pub fn evaluate(nodes: Vec<Node>) -> Result<Vec<ValueType>, String> {
                             (ValueType::Integer(a), ValueType::Integer(b)) => {
                                 stack.push(ValueType::Integer(a + b));
                             },
+                            (ValueType::Float(a), ValueType::Float(b)) => {
+                                stack.push(ValueType::Float(a + b));
+                            },
+                            (ValueType::String(a), ValueType::String(b)) => {
+                                stack.push(ValueType::String(format!("{}{}", b, a)));
+                            },
                             _ => return Err("Invalid types for add".to_string()),
                         }
                     },
@@ -28,6 +34,9 @@ pub fn evaluate(nodes: Vec<Node>) -> Result<Vec<ValueType>, String> {
                         match (a, b) {
                             (ValueType::Integer(a), ValueType::Integer(b)) => {
                                 stack.push(ValueType::Integer(b - a));
+                            },
+                            (ValueType::Float(a), ValueType::Float(b)) => {
+                                stack.push(ValueType::Float(a - b));
                             },
                             _ => return Err("Invalid types for sub".to_string()),
                         }
@@ -39,6 +48,15 @@ pub fn evaluate(nodes: Vec<Node>) -> Result<Vec<ValueType>, String> {
                             (ValueType::Integer(a), ValueType::Integer(b)) => {
                                 stack.push(ValueType::Integer(a * b));
                             },
+                            (ValueType::Float(a), ValueType::Float(b)) => {
+                                stack.push(ValueType::Float(a * b));
+                            },
+                            (ValueType::String(a), ValueType::Integer(b)) => {
+                                stack.push(ValueType::String(a.repeat(b as usize)));
+                            },
+                            (ValueType::Integer(a), ValueType::String(b)) => {
+                                stack.push(ValueType::String(b.repeat(a as usize)));
+                            },
                             _ => return Err("Invalid types for mul".to_string()),
                         }
                     },
@@ -48,6 +66,9 @@ pub fn evaluate(nodes: Vec<Node>) -> Result<Vec<ValueType>, String> {
                         match (a, b) {
                             (ValueType::Integer(a), ValueType::Integer(b)) => {
                                 stack.push(ValueType::Integer(b / a));
+                            },
+                            (ValueType::Float(a), ValueType::Float(b)) => {
+                                stack.push(ValueType::Float(a / b));
                             },
                             _ => return Err("Invalid types for div".to_string()),
                         }
@@ -59,11 +80,25 @@ pub fn evaluate(nodes: Vec<Node>) -> Result<Vec<ValueType>, String> {
                             (ValueType::Integer(a), ValueType::Integer(b)) => {
                                 stack.push(ValueType::Integer(b % a));
                             },
+                            (ValueType::Float(a), ValueType::Float(b)) => {
+                                stack.push(ValueType::Float(a % b));
+                            },
                             _ => return Err("Invalid types for mod".to_string()),
                         }
                     },
                     InstructionKind::Pop => {
                         stack.pop();
+                    },
+                    InstructionKind::Print => {
+                        let a = stack.pop().unwrap();
+                        match a {
+                            ValueType::Integer(i) => print!("{}", i),
+                            ValueType::Float(f) => print!("{}", f),
+                            ValueType::String(s) => print!("{}", s.replace("\\n", "\n")),
+                            _ => {
+                                return Err("Invalid type for print".to_string());
+                            }
+                        }
                     },
                 }
             },

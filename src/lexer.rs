@@ -1,4 +1,4 @@
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum TokenValue {
     Identifier(String),
     Integer(i32),
@@ -7,7 +7,7 @@ pub enum TokenValue {
     Punctuation(char),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Token {
     pub kind: &'static str,
     pub value: TokenValue,
@@ -42,6 +42,9 @@ pub fn lex(input: String) -> Result<Vec<Token>, String> {
             let value = until(&chars, cur, |c| c.is_alphanumeric());
             tokens.push(Token { kind: "identifier", value: TokenValue::Identifier(value.0) });
             cur = value.1;
+        } else if c == '.' && cur + 1 < chars.len() && chars[cur + 1].is_alphabetic() {
+            tokens.push(Token { kind: "punctuation", value: TokenValue::Punctuation('.') });
+            cur += 1;
         } else if c.is_digit(10) || c == '.' {
             let value = until(&chars, cur, |c| c.is_digit(10) || c == '.');
             if value.0.contains('.') {
@@ -54,6 +57,9 @@ pub fn lex(input: String) -> Result<Vec<Token>, String> {
             cur = value.1;
         } else if c == '"' {
             let value = until(&chars, cur + 1, |c| c != '"');
+            if cur + value.0.len() + 1 >= chars.len() || chars[cur + value.0.len() + 1] != '"' {
+                return Err("Unclosed string literal".to_string());
+            }
             tokens.push(Token { kind: "string", value: TokenValue::String(value.0) });
             cur = value.1 + 1;
         } else if could_be(c, ":,") {

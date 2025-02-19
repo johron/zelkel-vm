@@ -97,6 +97,7 @@ pub fn evaluate(nodes: Vec<Node>) -> Result<Vec<ValueType>, String> {
                             ValueType::Integer(i) => print!("{}", i),
                             ValueType::Float(f) => print!("{}", f),
                             ValueType::String(s) => print!("{}", s.replace("\\n", "\n")),
+                            ValueType::Boolean(b) => print!("{}", b),
                             _ => {
                                 return Err("Invalid type for print".to_string());
                             }

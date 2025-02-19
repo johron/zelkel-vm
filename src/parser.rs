@@ -5,6 +5,7 @@ pub enum ValueType {
     Integer(i32),
     Float(f32),
     String(String),
+    Boolean(bool),
 }
 
 #[derive(Debug, PartialEq)]
@@ -54,13 +55,15 @@ fn next<'a>(tokens: &'a Vec<Token>, i: &mut usize) -> Option<(&'a Token, usize)>
 fn parse_identifier(tokens: &Vec<Token>, i: &mut usize) -> Result<(Node, usize), String> {
     let token = current(tokens, i).unwrap();
 
-    if token.value == TokenValue::Identifier("push".to_string()) {
+    if token.value == TokenValue::Identifier("psh".to_string()) {
         let next_token = next(tokens, i).unwrap();
         let value = &next_token.0.value;
         let value = match value {
             TokenValue::Integer(i) => ValueType::Integer(*i),
             TokenValue::Float(f) => ValueType::Float(*f),
             TokenValue::String(s) => ValueType::String(s.to_string()),
+            TokenValue::Identifier(s) if s == "true" => ValueType::Boolean(true),
+            TokenValue::Identifier(s) if s == "false" => ValueType::Boolean(false),
             _ => {
                 return Err("Invalid value".to_string());
             }
@@ -83,8 +86,9 @@ fn parse_identifier(tokens: &Vec<Token>, i: &mut usize) -> Result<(Node, usize),
             TokenValue::Identifier(ref s) if s == "mul" => InstructionKind::Mul,
             TokenValue::Identifier(ref s) if s == "div" => InstructionKind::Div,
             TokenValue::Identifier(ref s) if s == "mod" => InstructionKind::Mod,
-            TokenValue::Identifier(ref s) if s == "print" => InstructionKind::Print,
-            TokenValue::Identifier(ref s) if s == "input" => InstructionKind::Input,
+            TokenValue::Identifier(ref s) if s == "prt" => InstructionKind::Print,
+            TokenValue::Identifier(ref s) if s == "inp" => InstructionKind::Input,
+            TokenValue::Identifier(ref s) if s == "pop" => InstructionKind::Pop,
             _ => return Err("Invalid identifier".to_string()),
         };
 

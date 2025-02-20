@@ -4,16 +4,17 @@ mod lexer;
 fn main() {
     let code = String::from(r#"
 .entry:
-    psh "Hello, world!\n"
+    psh ": "
     prt
-    jmp label1
-    psh "This will not be printed\n"
+    inp
+    jnz label1
+    psh "You didn't enter anything\n"
     prt
+    jmp end
 .label1:
-    psh 5
-    psh "\n"
-    add
+    psh "You entered something\n"
     prt
+.end:
 "#);
     let tokens = lexer::lex(code).expect("Failed to lex");
 
@@ -22,7 +23,7 @@ fn main() {
     let labels = parsed.1;
 
     let stack = evaluator::evaluate(instrs, labels).expect("Failed to evaluate");
-    println!("{:?}", stack);
+    //println!("{:?}", stack);
 }
 
 #[cfg(test)]

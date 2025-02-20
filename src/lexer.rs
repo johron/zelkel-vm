@@ -1,3 +1,5 @@
+use std::fmt;
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum TokenValue {
     Identifier(String),
@@ -5,6 +7,18 @@ pub enum TokenValue {
     Float(f32),
     String(String),
     Punctuation(char),
+}
+
+impl fmt::Display for TokenValue {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            TokenValue::Integer(i) => write!(f, "{}", i),
+            TokenValue::Float(fl) => write!(f, "{}", fl),
+            TokenValue::String(s) => write!(f, "{}", s),
+            TokenValue::Identifier(id) => write!(f, "{}", id),
+            TokenValue::Punctuation(p) => write!(f, "{}", p),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]

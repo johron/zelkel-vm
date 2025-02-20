@@ -5,17 +5,19 @@ use crate::parser::{ValueType, Instruction, InstructionKind};
 
 pub fn evaluate(instrs: Vec<Instruction>, labels: HashMap<String, usize>) -> Result<Vec<ValueType>, String> {
     let mut stack: Vec<ValueType> = Vec::new();
+    let mut cur = 0;
 
-    for instr in instrs {
+    while cur < instrs.len() {
+        let instr = instrs.get(cur).ok_or("Instruction not found")?;
         match instr.kind {
             InstructionKind::Push() => {
-                for param in instr.params {
-                    stack.push(param);
+                for param in &instr.params {
+                    stack.push(param.clone());
                 }
             },
             InstructionKind::Add => {
-                let a = stack.pop().ok_or("Stack underflow")?.clone();
-                let b = stack.pop().ok_or("Stack underflow")?.clone();
+                let a = stack.pop().ok_or("Add: Stack underflow")?.clone();
+                let b = stack.pop().ok_or("Add: Stack underflow")?.clone();
                 let a_clone = a.clone();
                 let b_clone = b.clone();
 
@@ -54,8 +56,8 @@ pub fn evaluate(instrs: Vec<Instruction>, labels: HashMap<String, usize>) -> Res
                     _ => return Err(format!("Invalid types for add {:?} {:?}", a_clone, b_clone)),                        }
             },
             InstructionKind::Sub => {
-                let a = stack.pop().ok_or("Stack underflow")?.clone();
-                let b = stack.pop().ok_or("Stack underflow")?.clone();
+                let a = stack.pop().ok_or("Sub: Stack underflow")?.clone();
+                let b = stack.pop().ok_or("Sub: Stack underflow")?.clone();
                 let a_clone = a.clone();
                 let b_clone = b.clone();
 
@@ -78,8 +80,8 @@ pub fn evaluate(instrs: Vec<Instruction>, labels: HashMap<String, usize>) -> Res
                 }
             },
             InstructionKind::Mul => {
-                let a = stack.pop().unwrap();
-                let b = stack.pop().unwrap();
+                let a = stack.pop().ok_or("Mul: Stack underflow")?.clone();
+                let b = stack.pop().ok_or("Mul: Stack underflow")?.clone();
                 let a_clone = a.clone();
                 let b_clone = b.clone();
 
@@ -105,8 +107,8 @@ pub fn evaluate(instrs: Vec<Instruction>, labels: HashMap<String, usize>) -> Res
                 }
             },
             InstructionKind::Div => {
-                let a = stack.pop().ok_or("Stack underflow")?.clone();
-                let b = stack.pop().ok_or("Stack underflow")?.clone();
+                let a = stack.pop().ok_or("Div: Stack underflow")?.clone();
+                let b = stack.pop().ok_or("Div: Stack underflow")?.clone();
                 let a_clone = a.clone();
                 let b_clone = b.clone();
 
@@ -129,8 +131,8 @@ pub fn evaluate(instrs: Vec<Instruction>, labels: HashMap<String, usize>) -> Res
                 }
             },
             InstructionKind::Mod => {
-                let a = stack.pop().ok_or("Stack underflow")?.clone();
-                let b = stack.pop().ok_or("Stack underflow")?.clone();
+                let a = stack.pop().ok_or("Mod: Stack underflow")?.clone();
+                let b = stack.pop().ok_or("Mod: Stack underflow")?.clone();
                 let a_clone = a.clone();
                 let b_clone = b.clone();
 
@@ -156,7 +158,7 @@ pub fn evaluate(instrs: Vec<Instruction>, labels: HashMap<String, usize>) -> Res
                 stack.pop();
             },
             InstructionKind::Print => {
-                let a = stack.pop().ok_or("Stack underflow")?.clone();
+                let a = stack.pop().ok_or("Print: Stack underflow")?.clone();
                 let a_clone = a.clone();
                 match a {
                     ValueType::Integer(i) => print!("{}", i),
@@ -174,9 +176,24 @@ pub fn evaluate(instrs: Vec<Instruction>, labels: HashMap<String, usize>) -> Res
                 stack.push(ValueType::String(input));
             },
             InstructionKind::Jump() => {
-                println!("{:?}", instr.params);
+                let label = instr.params[0].clone();
+                let i = labels.get(&label.to_string()).ok_or("Jump: Label not found")?;
+                cur = *i - 1;
+            },
+            InstructionKind::JumpNZ() => {
+                let label = instr.params[0].clone();
+                let i = labels.get(&label.to_string()).ok_or("JumpNZ: Label not found")?;
+                let a = stack.pop().ok_or("JumpNZ: Stack underflow")?.clone();
+                match a {
+                    ValueType::Integer(n) => if n != 0 { cur = i - 1; },
+                    ValueType::Float(n) => if n != 0.0 { cur = i - 1; },
+                    ValueType::String(n) => if n != "" { cur = i - 1; },
+                    ValueType::Boolean(n) => if n { cur = i - 1; },
+                }
             },
         }
+
+        cur += 1;
     }
 
     Ok(stack)

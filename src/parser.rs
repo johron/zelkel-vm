@@ -10,14 +10,13 @@ pub enum ValueType {
     Boolean(bool),
 }
 
-impl fmt::Display for TokenValue {
+impl fmt::Display for ValueType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            TokenValue::Integer(i) => write!(f, "{}", i),
-            TokenValue::Float(fl) => write!(f, "{}", fl),
-            TokenValue::String(s) => write!(f, "{}", s),
-            TokenValue::Identifier(id) => write!(f, "{}", id),
-            TokenValue::Punctuation(p) => write!(f, "{}", p),
+            ValueType::Integer(i) => write!(f, "{}", i),
+            ValueType::Float(fl) => write!(f, "{}", fl),
+            ValueType::String(s) => write!(f, "{}", s),
+            ValueType::Boolean(b) => write!(f, "{}", b),
         }
     }
 }
@@ -34,6 +33,7 @@ pub enum InstructionKind {
     Print,
     Input,
     Jump(),
+    JumpNZ(),
 }
 
 #[derive(Debug, PartialEq)]
@@ -74,7 +74,7 @@ fn parse_identifier(tokens: &Vec<Token>, i: &mut usize) -> Result<(Instruction, 
         };
 
         let instruction = Instruction {
-            kind: InstructionKind::Jump(),
+            kind: InstructionKind::Push(),
             params: vec![value],
         };
 
@@ -85,6 +85,16 @@ fn parse_identifier(tokens: &Vec<Token>, i: &mut usize) -> Result<(Instruction, 
 
         let instruction = Instruction {
             kind: InstructionKind::Jump(),
+            params: vec![ValueType::String(label.clone())],
+        };
+
+        Ok((instruction, next_token.1))
+    } else if token.value == TokenValue::Identifier("jnz".to_string()) {
+        let mut next_token = next(tokens, i).unwrap();
+        let label = next_token.0.value.to_string();
+
+        let instruction = Instruction {
+            kind: InstructionKind::JumpNZ(),
             params: vec![ValueType::String(label.clone())],
         };
 

@@ -34,6 +34,8 @@ pub enum InstructionKind {
     Input,
     Jump(),
     JumpNZ(),
+    Compare,
+    Type(),
 }
 
 #[derive(Debug, PartialEq)]
@@ -90,7 +92,7 @@ fn parse_identifier(tokens: &Vec<Token>, i: &mut usize) -> Result<(Instruction, 
 
         Ok((instruction, next_token.1))
     } else if token.value == TokenValue::Identifier("jnz".to_string()) {
-        let mut next_token = next(tokens, i).unwrap();
+        let next_token = next(tokens, i).unwrap();
         let label = next_token.0.value.to_string();
 
         let instruction = Instruction {
@@ -99,6 +101,16 @@ fn parse_identifier(tokens: &Vec<Token>, i: &mut usize) -> Result<(Instruction, 
         };
 
         Ok((instruction, next_token.1))
+    } else if token.value == TokenValue::Identifier("typ".to_string()) {
+        let next_token = next(tokens, i).unwrap();
+        let label = next_token.0.value.to_string();
+
+        let instruction = Instruction {
+            kind: InstructionKind::Type(),
+            params: vec![ValueType::String(label.clone())],
+        };
+
+        Ok((instruction, *i))
     } else {
         let kind = match token.value {
             TokenValue::Identifier(ref s) if s == "add" => InstructionKind::Add,
@@ -109,6 +121,7 @@ fn parse_identifier(tokens: &Vec<Token>, i: &mut usize) -> Result<(Instruction, 
             TokenValue::Identifier(ref s) if s == "prt" => InstructionKind::Print,
             TokenValue::Identifier(ref s) if s == "inp" => InstructionKind::Input,
             TokenValue::Identifier(ref s) if s == "pop" => InstructionKind::Pop,
+            TokenValue::Identifier(ref s) if s == "cmp" => InstructionKind::Compare,
             _ => return Err(format!("Invalid instruction: {:?}", token)),
         };
 

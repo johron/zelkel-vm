@@ -154,18 +154,40 @@ pub fn evaluate(instrs: Vec<Instruction>, labels: HashMap<String, usize>) -> Res
                     _ => return Err(format!("Invalid types for mod {:?} {:?}", a_clone, b_clone)),
                 }
             },
+            InstructionKind::Compare => {
+                let a = stack.pop().ok_or("Equal: Stack underflow")?.clone();
+                let b = stack.pop().ok_or("Equal: Stack underflow")?.clone();
+                let a_clone = a.clone();
+                let b_clone = b.clone();
+
+                match (a, b) {
+                    (ValueType::Integer(a), ValueType::Integer(b)) => {
+                        stack.push(ValueType::Boolean(a == b));
+                    },
+                    (ValueType::Float(a), ValueType::Float(b)) => {
+                        stack.push(ValueType::Boolean(a == b));
+                    },
+                    (ValueType::String(a), ValueType::String(b)) => {
+                        stack.push(ValueType::Boolean(a == b));
+                    },
+                    (ValueType::Boolean(a), ValueType::Boolean(b)) => {
+                        stack.push(ValueType::Boolean(a == b));
+                    },
+                    _ => return Err(format!("Invalid types for equal {:?} {:?}", a_clone, b_clone)),
+                }
+            },
             InstructionKind::Pop => {
                 stack.pop();
             },
             InstructionKind::Print => {
                 let a = stack.pop().ok_or("Print: Stack underflow")?.clone();
-                let a_clone = a.clone();
+                //let a_clone = a.clone();
                 match a {
                     ValueType::Integer(i) => print!("{}", i),
                     ValueType::Float(f) => print!("{}", f),
                     ValueType::String(s) => print!("{}", s.replace("\\n", "\n")),
                     ValueType::Boolean(b) => print!("{}", b),
-                    _ => return Err(format!("Invalid type for print {:?}", a_clone)),
+                    //_ => return Err(format!("Invalid type for print {:?}", a_clone)),
                 }
             },
             InstructionKind::Input => {
@@ -191,6 +213,41 @@ pub fn evaluate(instrs: Vec<Instruction>, labels: HashMap<String, usize>) -> Res
                     ValueType::Boolean(n) => if n { cur = i - 1; },
                 }
             },
+            InstructionKind::Type() => {
+                let label = match instr.params[0].clone() {
+                    ValueType::String(s) => s,
+                    _ => return Err("Type: Invalid type".to_string()),
+                };
+                let a = match stack.pop().ok_or("Type: Stack underflow")?.clone() {
+                    ValueType::String(s) => s,
+                    _ => return Err("Type: Invalid type".to_string()),
+                };
+
+                let res = match label {
+                    s if s == "int" => {
+                        match a.parse::<i32>() {
+                            Ok(i) => ValueType::Integer(i),
+                            Err(_) => return Err("Type: Invalid int".to_string()),
+                        }
+                    },
+                    s if s == "float" => {
+                        match a.parse::<f32>() {
+                            Ok(f) => ValueType::Float(f),
+                            Err(_) => return Err("Type: Invalid float".to_string()),
+                        }
+                    },
+                    s if s == "string" => ValueType::String(a),
+                    s if s == "bool" => {
+                        match a.parse::<bool>() {
+                            Ok(b) => ValueType::Boolean(b),
+                            Err(_) => return Err("Type: Invalid bool".to_string()),
+                        }
+                    },
+                    _ => return Err("Type: Invalid type".to_string()),
+                };
+
+                stack.push(res);
+            }
         }
 
         cur += 1;

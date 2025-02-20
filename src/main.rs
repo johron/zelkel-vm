@@ -4,30 +4,9 @@ mod lexer;
 fn main() {
     let code = String::from(r#"
 .entry:
-    psh "Enter two numbers equalling 10\n"
-    prt
-    psh "Number 1: "
-    prt
-    inp
-    typ float
-    psh "Number 2: "
-    prt
-    inp
-    typ float
-    add
-    dup
-    psh 10.0
-    cmp
-    jnz equal
-    psh "Not equal"
-    prt
-    prt
-    jmp end
-.equal:
-    psh "Equal"
-    prt
-    prt
-.end:
+    psh 5
+    psh 2
+    rot
 "#);
     let tokens = lexer::lex(code).expect("Failed to lex");
 

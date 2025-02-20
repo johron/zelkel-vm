@@ -31,6 +31,7 @@ pub enum InstructionKind {
     Mod,
     Pop,
     Dup,
+    Rot,
     Print,
     Input,
     Jump(),
@@ -124,6 +125,7 @@ fn parse_identifier(tokens: &Vec<Token>, i: &mut usize) -> Result<(Instruction, 
             TokenValue::Identifier(ref s) if s == "pop" => InstructionKind::Pop,
             TokenValue::Identifier(ref s) if s == "cmp" => InstructionKind::Compare,
             TokenValue::Identifier(ref s) if s == "dup" => InstructionKind::Dup,
+            TokenValue::Identifier(ref s) if s == "rot" => InstructionKind::Rot,
             _ => return Err(format!("Invalid instruction: {:?}", token)),
         };
 

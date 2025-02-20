@@ -183,6 +183,16 @@ pub fn evaluate(instrs: Vec<Instruction>, labels: HashMap<String, usize>) -> Res
                 let a = stack.last().ok_or("Dup: Stack underflow")?.clone();
                 stack.push(a);
             },
+            InstructionKind::Rot => {
+                if stack.len() < 2 {
+                    return Err("Rot: Stack underflow".to_string());
+                }
+
+                let a = stack.pop().unwrap();
+                let b = stack.pop().unwrap();
+                stack.push(b);
+                stack.push(a);
+            },
             InstructionKind::Print => {
                 let a = stack.pop().ok_or("Print: Stack underflow")?.clone();
                 //let a_clone = a.clone();

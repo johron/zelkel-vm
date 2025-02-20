@@ -3,7 +3,7 @@ use std::io::Write;
 use std::io;
 use crate::parser::{ValueType, Instruction, InstructionKind};
 
-pub fn evaluate(instrs: Vec<Instruction>, labels: HashMap<String, usize>) -> Result<Vec<ValueType>, String> {
+pub fn evaluate(instrs: Vec<Instruction>, labels: HashMap<String, usize>) -> Result<(Vec<ValueType>, i32), String> {
     let mut stack: Vec<ValueType> = Vec::new();
     let mut cur = 0;
 
@@ -158,7 +158,7 @@ pub fn evaluate(instrs: Vec<Instruction>, labels: HashMap<String, usize>) -> Res
                     _ => return Err(format!("Invalid types for mod {:?} {:?}", a_clone, b_clone)),
                 }
             },
-            InstructionKind::Compare => {
+            InstructionKind::Cmp => {
                 let a = stack.pop().ok_or("Equal: Stack underflow")?.clone();
                 let b = stack.pop().ok_or("Equal: Stack underflow")?.clone();
                 let a_clone = a.clone();
@@ -179,7 +179,7 @@ pub fn evaluate(instrs: Vec<Instruction>, labels: HashMap<String, usize>) -> Res
                     },
                     _ => return Err(format!("Invalid types for equal {:?} {:?}", a_clone, b_clone)),
                 }
-            },
+            }
             InstructionKind::Pop => {
                 stack.pop();
             },
@@ -189,12 +189,18 @@ pub fn evaluate(instrs: Vec<Instruction>, labels: HashMap<String, usize>) -> Res
             },
             InstructionKind::Print => {
                 let a = stack.pop().ok_or("Print: Stack underflow")?.clone();
+                let ln = match instr.params.get(0).cloned().unwrap_or(ValueType::Boolean(false)) {
+                    ValueType::Boolean(true) => "\n",
+                    ValueType::Boolean(false) => "",
+                    _ => return Err("Invalid type for print".to_string()),
+                };
+
                 //let a_clone = a.clone();
                 match a {
-                    ValueType::Integer(i) => print!("{}", i),
-                    ValueType::Float(f) => print!("{}", f),
-                    ValueType::String(s) => print!("{}", s.replace("\\n", "\n")),
-                    ValueType::Boolean(b) => print!("{}", b),
+                    ValueType::Integer(i) => print!("{}{}", i, ln),
+                    ValueType::Float(f) => print!("{}{}", f, ln),
+                    ValueType::String(s) => print!("{}{}", s.replace("\\n", "\n"), ln),
+                    ValueType::Boolean(b) => print!("{}{}", b, ln),
                     //_ => return Err(format!("Invalid type for print {:?}", a_clone)),
                 }
             },
@@ -210,15 +216,25 @@ pub fn evaluate(instrs: Vec<Instruction>, labels: HashMap<String, usize>) -> Res
                 let i = labels.get(&label.to_string()).ok_or("Jump: Label not found")?;
                 cur = *i - 1;
             },
-            InstructionKind::JumpNZ() => {
+            InstructionKind::Jnz() => {
                 let label = instr.params[0].clone();
-                let i = labels.get(&label.to_string()).ok_or("JumpNZ: Label not found")?;
-                let a = stack.pop().ok_or("JumpNZ: Stack underflow")?.clone();
+                let i = labels.get(&label.to_string()).ok_or("Jnz: Label not found")?;
+                let a = stack.pop().ok_or("Jnz: Stack underflow")?.clone();
                 match a {
                     ValueType::Integer(n) => if n != 0 { cur = i - 1; },
                     ValueType::Float(n) => if n != 0.0 { cur = i - 1; },
                     ValueType::String(n) => if n != "" { cur = i - 1; },
                     ValueType::Boolean(n) => if n { cur = i - 1; },
+                }
+            },InstructionKind::Jzr() => {
+                let label = instr.params[0].clone();
+                let i = labels.get(&label.to_string()).ok_or("Jzr: Label not found")?;
+                let a = stack.pop().ok_or("Jzr: Stack underflow")?.clone();
+                match a {
+                    ValueType::Integer(n) => if n == 0 { cur = i - 1; },
+                    ValueType::Float(n) => if n == 0.0 { cur = i - 1; },
+                    ValueType::String(n) => if n == "" { cur = i - 1; },
+                    ValueType::Boolean(n) => if !n { cur = i - 1; },
                 }
             },
             InstructionKind::Type() => {
@@ -258,11 +274,16 @@ pub fn evaluate(instrs: Vec<Instruction>, labels: HashMap<String, usize>) -> Res
                 };
 
                 stack.push(res);
-            }
+            },
+            InstructionKind::Ret => {
+                let a = stack.pop().ok_or("Ret: Stack underflow")?.clone();
+
+                return Ok((stack, a.to_int().expect("Ret: Invalid return value")));
+            },
         }
 
         cur += 1;
     }
 
-    Ok(stack)
+    Ok((stack, 0))
 }

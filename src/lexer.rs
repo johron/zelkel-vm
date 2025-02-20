@@ -3,6 +3,7 @@ use std::fmt;
 #[derive(Debug, PartialEq, Clone)]
 pub enum TokenValue {
     Identifier(String),
+    Label(String),
     Integer(i32),
     Float(f32),
     String(String),
@@ -16,6 +17,7 @@ impl fmt::Display for TokenValue {
             TokenValue::Float(fl) => write!(f, "{}", fl),
             TokenValue::String(s) => write!(f, "{}", s),
             TokenValue::Identifier(id) => write!(f, "{}", id),
+            TokenValue::Label(l) => write!(f, "{}", l),
             TokenValue::Punctuation(p) => write!(f, "{}", p),
         }
     }
@@ -57,8 +59,10 @@ pub fn lex(input: String) -> Result<Vec<Token>, String> {
             tokens.push(Token { kind: "identifier", value: TokenValue::Identifier(value.0) });
             cur = value.1;
         } else if c == '.' && cur + 1 < chars.len() && chars[cur + 1].is_alphabetic() {
-            tokens.push(Token { kind: "punctuation", value: TokenValue::Punctuation('.') });
             cur += 1;
+            let value = until(&chars, cur, |c| c.is_alphanumeric());
+            tokens.push(Token { kind: "label", value: TokenValue::Label(".".to_owned() + &*value.0) });
+            cur = value.1;
         } else if c.is_digit(10) || c == '.' {
             let value = until(&chars, cur, |c| c.is_digit(10) || c == '.');
             if value.0.contains('.') {

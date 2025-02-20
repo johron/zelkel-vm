@@ -21,23 +21,34 @@ impl fmt::Display for ValueType {
     }
 }
 
+impl ValueType {
+    pub fn to_int(&self) -> Result<i32, String> {
+        match self {
+            ValueType::Integer(i) => Ok(*i),
+            _ => Err("Cannot convert to int".to_string()),
+        }
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub enum InstructionKind {
-    Push(),
     Add,
     Sub,
     Mul,
     Div,
     Mod,
-    Pop,
+    Cmp,
     Dup,
+    Pop,
+    Push(),
     Rot,
     Print,
     Input,
     Jump(),
-    JumpNZ(),
-    Compare,
+    Jnz(),
+    Jzr(),
     Type(),
+    Ret,
 }
 
 #[derive(Debug, PartialEq)]
@@ -98,7 +109,17 @@ fn parse_identifier(tokens: &Vec<Token>, i: &mut usize) -> Result<(Instruction, 
         let label = next_token.0.value.to_string();
 
         let instruction = Instruction {
-            kind: InstructionKind::JumpNZ(),
+            kind: InstructionKind::Jnz(),
+            params: vec![ValueType::String(label.clone())],
+        };
+
+        Ok((instruction, next_token.1))
+    } else if token.value == TokenValue::Identifier("jzr".to_string()) {
+        let next_token = next(tokens, i).unwrap();
+        let label = next_token.0.value.to_string();
+
+        let instruction = Instruction {
+            kind: InstructionKind::Jzr(),
             params: vec![ValueType::String(label.clone())],
         };
 
@@ -143,9 +164,10 @@ fn parse_identifier(tokens: &Vec<Token>, i: &mut usize) -> Result<(Instruction, 
             TokenValue::Identifier(ref s) if s == "mod" => InstructionKind::Mod,
             TokenValue::Identifier(ref s) if s == "inp" => InstructionKind::Input,
             TokenValue::Identifier(ref s) if s == "pop" => InstructionKind::Pop,
-            TokenValue::Identifier(ref s) if s == "cmp" => InstructionKind::Compare,
+            TokenValue::Identifier(ref s) if s == "cmp" => InstructionKind::Cmp,
             TokenValue::Identifier(ref s) if s == "dup" => InstructionKind::Dup,
             TokenValue::Identifier(ref s) if s == "rot" => InstructionKind::Rot,
+            TokenValue::Identifier(ref s) if s == "ret" => InstructionKind::Ret,
             _ => return Err(format!("Invalid instruction: {:?}", token)),
         };
 
@@ -167,27 +189,33 @@ pub fn parse(tokens: Vec<Token>) -> Result<(Vec<Instruction>, HashMap<String, us
     while i < tokens.len() {
         let t = current(&tokens, &mut i).unwrap();
 
+        if i == 0 {
+            if t.value != TokenValue::Label(".entry".to_string()) {
+                return Err("Parser: Expected '.entry' label".to_string());
+            }
+            if next(&tokens, &mut i).unwrap().0.value != TokenValue::Punctuation(":".parse().unwrap()) {
+                return Err("Parser: Expected ':' after '.entry' label".to_string());
+            }
+            i += 1;
+            labels.insert(t.value.to_string(), instrs.len());
+            continue;
+        }
+
         match t.kind {
             "identifier" => {
                 let parsed = parse_identifier(&tokens, &mut i).expect("Failed to parse identifier");
                 instrs.push(parsed.0);
                 i = parsed.1 + 1;
             },
-            "punctuation" => {
-                if t.value == TokenValue::Punctuation(".".parse().unwrap()) {
-                    let ident = next(&tokens, &mut i).expect("Failed to get next token");
-                    i = ident.1;
-                    if next(&tokens, &mut i).unwrap().0.value != TokenValue::Punctuation(":".parse().unwrap()) {
-                        return Err("Parser: Expected ':'".to_string());
-                    }
-                    i += 1;
-                    labels.insert(ident.0.value.to_string(), instrs.len());
-                } else {
-                    return Err("Unexpected token".to_string());
+            "label" => {
+                if next(&tokens, &mut i).unwrap().0.value != TokenValue::Punctuation(":".parse().unwrap()) {
+                    return Err("Parser: Expected ':' after label".to_string());
                 }
+                labels.insert(t.value.to_string(), instrs.len());
+                i += 1;
             },
             _ => {
-                return Err("Unexpected token".to_string());
+                Err(format!("Unexpected token: {:?}", t))?;
             }
         }
     }

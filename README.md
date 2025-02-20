@@ -15,6 +15,7 @@
 - `inp` - Read a value from the user and push it onto the stack
 - `typ` - Convert the top value on the stack from a string to a different type
 - `cmp` - Compare two values on the stack
+- `dup` - Duplicate the top value on the stack
 
 ## License
 Licensed under the MIT License; please see the [license file](LICENSE.md) for terms.

@@ -179,6 +179,10 @@ pub fn evaluate(instrs: Vec<Instruction>, labels: HashMap<String, usize>) -> Res
             InstructionKind::Pop => {
                 stack.pop();
             },
+            InstructionKind::Dup => {
+                let a = stack.last().ok_or("Dup: Stack underflow")?.clone();
+                stack.push(a);
+            },
             InstructionKind::Print => {
                 let a = stack.pop().ok_or("Print: Stack underflow")?.clone();
                 //let a_clone = a.clone();
@@ -220,6 +224,9 @@ pub fn evaluate(instrs: Vec<Instruction>, labels: HashMap<String, usize>) -> Res
                 };
                 let a = match stack.pop().ok_or("Type: Stack underflow")?.clone() {
                     ValueType::String(s) => s,
+                    ValueType::Integer(i) => i.to_string(),
+                    ValueType::Float(f) => f.to_string(),
+                    ValueType::Boolean(b) => b.to_string(),
                     _ => return Err("Type: Invalid type".to_string()),
                 };
 
@@ -236,7 +243,7 @@ pub fn evaluate(instrs: Vec<Instruction>, labels: HashMap<String, usize>) -> Res
                             Err(_) => return Err("Type: Invalid float".to_string()),
                         }
                     },
-                    s if s == "string" => ValueType::String(a),
+                    s if s == "str" => ValueType::String(a),
                     s if s == "bool" => {
                         match a.parse::<bool>() {
                             Ok(b) => ValueType::Boolean(b),

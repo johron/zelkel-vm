@@ -113,6 +113,27 @@ fn parse_identifier(tokens: &Vec<Token>, i: &mut usize) -> Result<(Instruction, 
         };
 
         Ok((instruction, *i))
+    } else if token.value == TokenValue::Identifier("prt".to_string()) {
+        if let Some((next_token, _)) = next(tokens, i) {
+            if next_token.value == TokenValue::Punctuation(",".to_string().parse().unwrap()) {
+                if let Some((next_token, _)) = next(tokens, i) {
+                    if next_token.value == TokenValue::Identifier("ln".to_string()) {
+                        let instruction = Instruction {
+                            kind: InstructionKind::Print,
+                            params: vec![ValueType::Boolean(true)],
+                        };
+                        return Ok((instruction, *i));
+                    }
+                }
+            }
+        }
+
+        let instruction = Instruction {
+            kind: InstructionKind::Print,
+            params: vec![],
+        };
+
+        Ok((instruction, *i))
     } else {
         let kind = match token.value {
             TokenValue::Identifier(ref s) if s == "add" => InstructionKind::Add,
@@ -120,7 +141,6 @@ fn parse_identifier(tokens: &Vec<Token>, i: &mut usize) -> Result<(Instruction, 
             TokenValue::Identifier(ref s) if s == "mul" => InstructionKind::Mul,
             TokenValue::Identifier(ref s) if s == "div" => InstructionKind::Div,
             TokenValue::Identifier(ref s) if s == "mod" => InstructionKind::Mod,
-            TokenValue::Identifier(ref s) if s == "prt" => InstructionKind::Print,
             TokenValue::Identifier(ref s) if s == "inp" => InstructionKind::Input,
             TokenValue::Identifier(ref s) if s == "pop" => InstructionKind::Pop,
             TokenValue::Identifier(ref s) if s == "cmp" => InstructionKind::Compare,

@@ -12,8 +12,12 @@ pub fn evaluate(instrs: Vec<Instruction>, labels: HashMap<String, usize>) -> Res
         match instr.kind {
             InstructionKind::Push() => {
                 for param in &instr.params {
-                    stack.push(param.clone());
+                    stack.insert(0, param.clone());
                 }
+            },
+            InstructionKind::Rot => {
+                let a = stack.pop().ok_or("Rot: Stack underflow")?.clone();
+                stack.insert(0, a);
             },
             InstructionKind::Add => {
                 let a = stack.pop().ok_or("Add: Stack underflow")?.clone();
@@ -181,16 +185,6 @@ pub fn evaluate(instrs: Vec<Instruction>, labels: HashMap<String, usize>) -> Res
             },
             InstructionKind::Dup => {
                 let a = stack.last().ok_or("Dup: Stack underflow")?.clone();
-                stack.push(a);
-            },
-            InstructionKind::Rot => {
-                if stack.len() < 2 {
-                    return Err("Rot: Stack underflow".to_string());
-                }
-
-                let a = stack.pop().unwrap();
-                let b = stack.pop().unwrap();
-                stack.push(b);
                 stack.push(a);
             },
             InstructionKind::Print => {

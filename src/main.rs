@@ -4,9 +4,8 @@ mod lexer;
 fn main() {
     let code = String::from(r#"
 .entry:
-    psh 5
-    psh 2
-    rot
+    psh 1
+    prt, ln
 "#);
     let tokens = lexer::lex(code).expect("Failed to lex");
 
@@ -15,7 +14,8 @@ fn main() {
     let labels = parsed.1;
 
     let stack = evaluator::evaluate(instrs, labels).expect("Failed to evaluate");
-    println!("{:?}", stack);
+    println!("{:?}", stack[0]);
+    println!("{:?}", stack[1]);
 }
 
 #[cfg(test)]

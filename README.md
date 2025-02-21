@@ -19,5 +19,8 @@
 - `jzr` - Jump to a specific label if the top value on the stack is zero
 - `typ` - Convert the top value on the stack from a string to a different type
 
+- sys
+- 
+
 ## License
 Licensed under the MIT License; please see the [license file](LICENSE.md) for terms.

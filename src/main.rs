@@ -1,19 +1,19 @@
 mod parser;
 mod lexer;
+mod evaluator;
 
 fn main() {
     let code = String::from(r#"
+.test:
+    psh 5
+    psh 5
+    add
+    jmp .here
 .entry:
-    psh "Hello, world!"
+    psh 1
     prt, ln
-    psh 0
-    jzr .end
-.mid:
-    psh "This is the middle"
-    prt, ln
-.end:
-    psh 0
-    ret
+    jmp .test
+.here:
 "#);
     let tokens = lexer::lex(code).expect("Failed to lex");
 
@@ -32,4 +32,3 @@ fn main() {
 
 #[cfg(test)]
 mod tests;
-mod evaluator;

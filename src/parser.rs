@@ -189,18 +189,6 @@ pub fn parse(tokens: Vec<Token>) -> Result<(Vec<Instruction>, HashMap<String, us
     while i < tokens.len() {
         let t = current(&tokens, &mut i).unwrap();
 
-        if i == 0 {
-            if t.value != TokenValue::Label(".entry".to_string()) {
-                return Err("Parser: Expected '.entry' label".to_string());
-            }
-            if next(&tokens, &mut i).unwrap().0.value != TokenValue::Punctuation(":".parse().unwrap()) {
-                return Err("Parser: Expected ':' after '.entry' label".to_string());
-            }
-            i += 1;
-            labels.insert(t.value.to_string(), instrs.len());
-            continue;
-        }
-
         match t.kind {
             "identifier" => {
                 let parsed = parse_identifier(&tokens, &mut i).expect("Failed to parse identifier");
@@ -218,6 +206,10 @@ pub fn parse(tokens: Vec<Token>) -> Result<(Vec<Instruction>, HashMap<String, us
                 Err(format!("Unexpected token: {:?}", t))?;
             }
         }
+    }
+
+    if labels.get(".entry").is_none() {
+        return Err("Parser: No .entry label found".to_string());
     }
 
     Ok((instrs, labels))

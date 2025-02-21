@@ -5,7 +5,8 @@ use crate::parser::{ValueType, Instruction, InstructionKind};
 
 pub fn evaluate(instrs: Vec<Instruction>, labels: HashMap<String, usize>) -> Result<(Vec<ValueType>, i32), String> {
     let mut stack: Vec<ValueType> = Vec::new();
-    let mut cur = 0;
+    let mut cur = *labels.get(".entry").ok_or("Entry label not found")?;
+    println!("{:?}{}", labels, cur);
 
     while cur < instrs.len() {
         let instr = instrs.get(cur).ok_or("Instruction not found")?;
@@ -213,28 +214,28 @@ pub fn evaluate(instrs: Vec<Instruction>, labels: HashMap<String, usize>) -> Res
             },
             InstructionKind::Jump() => {
                 let label = instr.params[0].clone();
-                let i = labels.get(&label.to_string()).ok_or("Jump: Label not found")?;
-                cur = *i - 1;
+                let i = labels.get(&label.to_string()).ok_or("Jump: Label not found")? - 1;
+                cur = i;
             },
             InstructionKind::Jnz() => {
                 let label = instr.params[0].clone();
-                let i = labels.get(&label.to_string()).ok_or("Jnz: Label not found")?;
+                let i = labels.get(&label.to_string()).ok_or("Jnz: Label not found")? - 1;
                 let a = stack.pop().ok_or("Jnz: Stack underflow")?.clone();
                 match a {
-                    ValueType::Integer(n) => if n != 0 { cur = i - 1; },
-                    ValueType::Float(n) => if n != 0.0 { cur = i - 1; },
-                    ValueType::String(n) => if n != "" { cur = i - 1; },
-                    ValueType::Boolean(n) => if n { cur = i - 1; },
+                    ValueType::Integer(n) => if n != 0 { cur = i; },
+                    ValueType::Float(n) => if n != 0.0 { cur = i; },
+                    ValueType::String(n) => if n != "" { cur = i; },
+                    ValueType::Boolean(n) => if n { cur = i; },
                 }
             },InstructionKind::Jzr() => {
                 let label = instr.params[0].clone();
-                let i = labels.get(&label.to_string()).ok_or("Jzr: Label not found")?;
+                let i = labels.get(&label.to_string()).ok_or("Jzr: Label not found")? - 1;
                 let a = stack.pop().ok_or("Jzr: Stack underflow")?.clone();
                 match a {
-                    ValueType::Integer(n) => if n == 0 { cur = i - 1; },
-                    ValueType::Float(n) => if n == 0.0 { cur = i - 1; },
-                    ValueType::String(n) => if n == "" { cur = i - 1; },
-                    ValueType::Boolean(n) => if !n { cur = i - 1; },
+                    ValueType::Integer(n) => if n == 0 { cur = i; },
+                    ValueType::Float(n) => if n == 0.0 { cur = i; },
+                    ValueType::String(n) => if n == "" { cur = i; },
+                    ValueType::Boolean(n) => if !n { cur = i; },
                 }
             },
             InstructionKind::Type() => {

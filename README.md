@@ -22,5 +22,8 @@
 - sys
 - 
 
+endre sjekking for .entry section sånn at det heller jumper til .entry label i evaluator.rs. Fjerne sjekking i parser for .entry label, eller kanskje ha sånn 
+at han passer på at ved slutten av parsing så har han en .entry label. må legge til funksjoner som jeg kan kjøre med cal
+
 ## License
 Licensed under the MIT License; please see the [license file](LICENSE.md) for terms.

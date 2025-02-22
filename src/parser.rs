@@ -50,12 +50,21 @@ pub enum InstructionKind {
     Type(),
     Ret,
     Label(),
+    Function(),
+    Run(),
 }
 
 #[derive(Debug, PartialEq)]
 pub struct Instruction {
     pub kind: InstructionKind,
     pub params: Vec<ValueType>,
+}
+
+#[derive(Debug)]
+pub struct ParserRet {
+    pub instrs: Vec<Instruction>,
+    pub labels: HashMap<String, usize>,
+    pub funcs: HashMap<String, usize>,
 }
 
 fn current<'a>(tokens: &'a Vec<Token>, i: &usize) -> Option<&'a Token> {
@@ -156,6 +165,16 @@ fn parse_identifier(tokens: &Vec<Token>, i: &mut usize) -> Result<(Instruction, 
         };
 
         Ok((instruction, *i))
+    } else if token.value == TokenValue::Identifier("run".to_string()) {
+        let next_token = next(tokens, i).unwrap();
+        let func = next_token.0.value.to_string();
+
+        let instruction = Instruction {
+            kind: InstructionKind::Run(),
+            params: vec![ValueType::String(func.clone())],
+        };
+
+        Ok((instruction, next_token.1))
     } else {
         let kind = match token.value {
             TokenValue::Identifier(ref s) if s == "add" => InstructionKind::Add,
@@ -181,11 +200,12 @@ fn parse_identifier(tokens: &Vec<Token>, i: &mut usize) -> Result<(Instruction, 
     }
 }
 
-pub fn parse(tokens: Vec<Token>) -> Result<(Vec<Instruction>, HashMap<String, usize>), String> {
+pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, String> {
     let mut instrs: Vec<Instruction> = Vec::new();
     let mut i = 0;
 
     let mut labels: HashMap<String, usize> = HashMap::new();
+    let mut funcs: HashMap<String, usize> = HashMap::new();
 
     while i < tokens.len() {
         let t = current(&tokens, &mut i).unwrap();
@@ -207,6 +227,17 @@ pub fn parse(tokens: Vec<Token>) -> Result<(Vec<Instruction>, HashMap<String, us
                     params: vec![ValueType::String(t.value.to_string())],
                 });
             },
+            "function" => {
+                if next(&tokens, &mut i).unwrap().0.value != TokenValue::Punctuation(":".parse().unwrap()) {
+                    return Err("Parser: Expected ':' after function".to_string());
+                }
+                funcs.insert(t.value.to_string(), instrs.len());
+                i += 1;
+                instrs.push(Instruction {
+                    kind: InstructionKind::Function(),
+                    params: vec![ValueType::String(t.value.to_string())],
+                });
+            },
             _ => {
                 Err(format!("Unexpected token: {:?}", t))?;
             }
@@ -217,5 +248,9 @@ pub fn parse(tokens: Vec<Token>) -> Result<(Vec<Instruction>, HashMap<String, us
         return Err("Parser: No .entry label found".to_string());
     }
 
-    Ok((instrs, labels))
+    Ok(ParserRet {
+        instrs,
+        labels,
+        funcs,
+    })
 }

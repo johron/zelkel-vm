@@ -1,26 +1,30 @@
-use std::collections::HashMap;
 use std::io::Write;
 use std::io;
-use crate::parser::{ValueType, Instruction, InstructionKind};
+use crate::parser::{ValueType, InstructionKind, ParserRet};
 
-pub fn evaluate(instrs: Vec<Instruction>, labels: HashMap<String, usize>) -> Result<(Vec<ValueType>, i32), String> {
+pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
+    let instrs = parsed.instrs;
+    let labels = parsed.labels;
+    let funcs = parsed.funcs;
+
     let mut stack: Vec<ValueType> = Vec::new();
     let mut ret_stack: Vec<i32> = Vec::new();
 
+    let mut is_in_func = false;
+
     let mut cur = *labels.get(".entry").ok_or("Entry label not found")?;
-    println!("{:?}{}", labels, cur);
 
     while cur < instrs.len() {
         let instr = instrs.get(cur).ok_or("Instruction not found")?;
         match instr.kind {
             InstructionKind::Push() => {
                 for param in &instr.params {
-                    stack.insert(0, param.clone());
+                    stack.push(param.clone());
                 }
             },
             InstructionKind::Rot => {
                 let a = stack.pop().ok_or("Rot: Stack underflow")?.clone();
-                stack.insert(0, a);
+                stack.push(a);
             },
             InstructionKind::Add => {
                 println!("{:?}", stack);
@@ -218,12 +222,14 @@ pub fn evaluate(instrs: Vec<Instruction>, labels: HashMap<String, usize>) -> Res
             InstructionKind::Jump() => {
                 let label = instr.params[0].clone();
                 let i = labels.get(&label.to_string()).ok_or("Jump: Label not found")?;
+                is_in_func = false;
                 cur = *i;
             },
             InstructionKind::Jnz() => {
                 let label = instr.params[0].clone();
                 let i = labels.get(&label.to_string()).ok_or("Jnz: Label not found")? - 1;
                 let a = stack.pop().ok_or("Jnz: Stack underflow")?.clone();
+                is_in_func = false;
                 match a {
                     ValueType::Integer(n) => if n != 0 { cur = i; },
                     ValueType::Float(n) => if n != 0.0 { cur = i; },
@@ -234,6 +240,7 @@ pub fn evaluate(instrs: Vec<Instruction>, labels: HashMap<String, usize>) -> Res
                 let label = instr.params[0].clone();
                 let i = labels.get(&label.to_string()).ok_or("Jzr: Label not found")? - 1;
                 let a = stack.pop().ok_or("Jzr: Stack underflow")?.clone();
+                is_in_func = false;
                 match a {
                     ValueType::Integer(n) => if n == 0 { cur = i; },
                     ValueType::Float(n) => if n == 0.0 { cur = i; },
@@ -280,11 +287,28 @@ pub fn evaluate(instrs: Vec<Instruction>, labels: HashMap<String, usize>) -> Res
                 stack.push(res);
             },
             InstructionKind::Ret => {
-                let a = stack.pop().ok_or("Ret: Stack underflow")?.clone();
-
-                return Ok((stack, a.to_int().expect("Ret: Invalid return value")));
+                if !is_in_func {
+                    return Err("Ret: Not in function".to_string());
+                }
+                let i = ret_stack.pop().ok_or("Ret: Stack underflow")?;
+                cur = i as usize;
+                is_in_func = false;
             },
-            InstructionKind::Label() => {},
+            InstructionKind::Run() => {
+                let func = instr.params[0].clone();
+                let i = funcs.get(&func.to_string()).ok_or("Run: Function not found")?;
+                ret_stack.push(cur as i32);
+                is_in_func = true;
+                cur = *i;
+            },
+            InstructionKind::Label() => {
+                if is_in_func {
+                    return Err("Label: Label in function".to_string());
+                }
+            },
+            InstructionKind::Function() => {
+                is_in_func = true;
+            },
         }
 
         cur += 1;

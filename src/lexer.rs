@@ -67,8 +67,8 @@ pub fn lex(input: String) -> Result<Vec<Token>, String> {
             cur = value.1;
         } else if c == '@' {
             let value = until(&chars, cur + 1, |c| c.is_alphanumeric());
-            tokens.push(Token { kind: "function", value: TokenValue::Function(".".to_owned() + &*value.0) });
-            cur = value.1 + 1;
+            tokens.push(Token { kind: "function", value: TokenValue::Function("@".to_owned() + &*value.0) });
+            cur = value.1;
         } else if c.is_digit(10) || c == '.' {
             let value = until(&chars, cur, |c| c.is_digit(10) || c == '.');
             if value.0.contains('.') {

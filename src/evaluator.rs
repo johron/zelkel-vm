@@ -5,6 +5,8 @@ use crate::parser::{ValueType, Instruction, InstructionKind};
 
 pub fn evaluate(instrs: Vec<Instruction>, labels: HashMap<String, usize>) -> Result<(Vec<ValueType>, i32), String> {
     let mut stack: Vec<ValueType> = Vec::new();
+    let mut ret_stack: Vec<i32> = Vec::new();
+
     let mut cur = *labels.get(".entry").ok_or("Entry label not found")?;
     println!("{:?}{}", labels, cur);
 

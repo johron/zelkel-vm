@@ -4,6 +4,7 @@ use std::fmt;
 pub enum TokenValue {
     Identifier(String),
     Label(String),
+    Function(String),
     Integer(i32),
     Float(f32),
     String(String),
@@ -19,6 +20,7 @@ impl fmt::Display for TokenValue {
             TokenValue::Identifier(id) => write!(f, "{}", id),
             TokenValue::Label(l) => write!(f, "{}", l),
             TokenValue::Punctuation(p) => write!(f, "{}", p),
+            TokenValue::Function(fn_name) => write!(f, "{}", fn_name),
         }
     }
 }
@@ -63,6 +65,10 @@ pub fn lex(input: String) -> Result<Vec<Token>, String> {
             let value = until(&chars, cur, |c| c.is_alphanumeric());
             tokens.push(Token { kind: "label", value: TokenValue::Label(".".to_owned() + &*value.0) });
             cur = value.1;
+        } else if c == '@' {
+            let value = until(&chars, cur + 1, |c| c.is_alphanumeric());
+            tokens.push(Token { kind: "function", value: TokenValue::Function(".".to_owned() + &*value.0) });
+            cur = value.1 + 1;
         } else if c.is_digit(10) || c == '.' {
             let value = until(&chars, cur, |c| c.is_digit(10) || c == '.');
             if value.0.contains('.') {

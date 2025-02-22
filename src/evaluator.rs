@@ -25,7 +25,9 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
             },
             InstructionKind::Rot => {
                 let a = stack.pop().ok_or("Rot: Stack underflow")?.clone();
+                let b = stack.pop().ok_or("Rot: Stack underflow")?.clone();
                 stack.push(a);
+                stack.push(b);
             },
             InstructionKind::Add => {
                 println!("{:?}", stack);
@@ -196,23 +198,6 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                 let a = stack.last().ok_or("Dup: Stack underflow")?.clone();
                 stack.push(a);
             },
-            InstructionKind::Print => {
-                let a = stack.pop().ok_or("Print: Stack underflow")?.clone();
-                let ln = match instr.params.get(0).cloned().unwrap_or(ValueType::Boolean(false)) {
-                    ValueType::Boolean(true) => "\n",
-                    ValueType::Boolean(false) => "",
-                    _ => return Err("Invalid type for print".to_string()),
-                };
-
-                //let a_clone = a.clone();
-                match a {
-                    ValueType::Integer(i) => print!("{}{}", i, ln),
-                    ValueType::Float(f) => print!("{}{}", f, ln),
-                    ValueType::String(s) => print!("{}{}", s, ln),
-                    ValueType::Boolean(b) => print!("{}{}", b, ln),
-                    //_ => return Err(format!("Invalid type for print {:?}", a_clone)),
-                }
-            },
             InstructionKind::Input => {
                 io::stdout().flush().expect("Failed to flush stdout");
                 let mut input = String::new();
@@ -236,6 +221,7 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                     ValueType::Float(n) => if n != 0.0 { cur = i; },
                     ValueType::String(n) => if n != "" { cur = i; },
                     ValueType::Boolean(n) => if n { cur = i; },
+                    _ => return Err("Jnz: Invalid type".to_string()),
                 }
             },InstructionKind::Jzr() => {
                 let label = instr.params[0].clone();
@@ -247,6 +233,7 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                     ValueType::Float(n) => if n == 0.0 { cur = i; },
                     ValueType::String(n) => if n == "" { cur = i; },
                     ValueType::Boolean(n) => if !n { cur = i; },
+                    _ => return Err("Jzr: Invalid type".to_string()),
                 }
             },
             InstructionKind::Type() => {
@@ -260,6 +247,7 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                     ValueType::Float(f) => f.to_string(),
                     ValueType::Boolean(b) => b.to_string(),
                     _ => return Err("Type: Invalid type".to_string()),
+                    //_ => return Err("Type: Invalid type".to_string()),
                 };
 
                 let res = match label {
@@ -329,20 +317,34 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                             ValueType::Float(f) => *f as usize,
                             ValueType::Boolean(b) => *b as usize,
                             ValueType::String(s) => s.as_ptr() as usize,
+                            ValueType::Buffer(s) => {
+                                let buffer_size = *parsed.buffers.get(&s).ok_or_else(|| format!("Buffer {} not found", s))?;
+                                const BUFFER_SIZE: i32 = buffer_size;
+                                return [0u8; BUFFER_SIZE as usize].as_mut_ptr() as usize;
+                            },
                         }).collect();
 
-                        unsafe {
-                            let syscall_num = syscalls::Sysno::from(num as u32);
-                            let syscall_args = syscalls::SyscallArgs::new(syscall_args[0], syscall_args[1], syscall_args[2], syscall_args[3], syscall_args[4], syscall_args[5]);
-                            let result = unsafe { syscalls::syscall(syscall_num, &syscall_args) };
-                            result
-                        }
+                        let syscall_num = syscalls::Sysno::from(num as u32);
+                        let syscall_args = syscalls::SyscallArgs::new(syscall_args[0], syscall_args[1], syscall_args[2], syscall_args[3], syscall_args[4], syscall_args[5]);
+                        let result = unsafe { syscalls::syscall(syscall_num, &syscall_args) };
+                        result
                     },
                     _ => return Err("Sys: Invalid syscall number type".to_string()),
                 };
 
                 stack.push(ValueType::Integer(result.unwrap() as i32));
-            }
+            },
+            InstructionKind::Len => {
+                let a = stack.last().ok_or("Len: Stack underflow")?.clone();
+                let len = match a {
+                    ValueType::String(s) => s.len(),
+                    _ => return Err("Len: Invalid type".to_string()),
+                };
+                stack.push(ValueType::Integer(len as i32));
+            },
+            _ => {
+                return Err("Invalid instruction".to_string())
+            },
         }
 
         cur += 1;

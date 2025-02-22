@@ -8,6 +8,7 @@ pub enum ValueType {
     Float(f32),
     String(String),
     Boolean(bool),
+    Buffer(String),
 }
 
 impl fmt::Display for ValueType {
@@ -17,15 +18,6 @@ impl fmt::Display for ValueType {
             ValueType::Float(fl) => write!(f, "{}", fl),
             ValueType::String(s) => write!(f, "{}", s),
             ValueType::Boolean(b) => write!(f, "{}", b),
-        }
-    }
-}
-
-impl ValueType {
-    pub fn to_int(&self) -> Result<i32, String> {
-        match self {
-            ValueType::Integer(i) => Ok(*i),
-            _ => Err("Cannot convert to int".to_string()),
         }
     }
 }
@@ -42,7 +34,6 @@ pub enum InstructionKind {
     Pop,
     Push(),
     Rot,
-    Print,
     Input,
     Jump(),
     Jnz(),
@@ -53,6 +44,8 @@ pub enum InstructionKind {
     Function(),
     Run(),
     Sys,
+    Len,
+    Alloc,
 }
 
 #[derive(Debug, PartialEq)]
@@ -66,139 +59,27 @@ pub struct ParserRet {
     pub instrs: Vec<Instruction>,
     pub labels: HashMap<String, usize>,
     pub funcs: HashMap<String, usize>,
+    pub buffers: HashMap<String, i32>,
 }
 
-fn current<'a>(tokens: &'a Vec<Token>, i: &usize) -> Option<&'a Token> {
-    if *i < tokens.len() {
-        Some(&tokens[*i])
+fn current(tokens: &Vec<Token>, i: usize) -> Option<&Token> {
+    if i < tokens.len() {
+        Some(&tokens[i])
     } else {
         None
     }
 }
 
-fn next<'a>(tokens: &'a Vec<Token>, i: &mut usize) -> Option<(&'a Token, usize)> {
-    *i += 1;
-    let tok = current(tokens, i);
-    Some((tok?, *i))
+fn next(tokens: &Vec<Token>, mut i: usize) -> Option<(&Token)> {
+    let tok = current(tokens, i + 1);
+    Some(tok?)
 }
 
-fn parse_identifier(tokens: &Vec<Token>, i: &mut usize) -> Result<(Instruction, usize), String> {
-    let token = current(tokens, i).unwrap();
-
-    if token.value == TokenValue::Identifier("psh".to_string()) {
-        let next_token = next(tokens, i).unwrap();
-        let value = &next_token.0.value;
-        let value = match value {
-            TokenValue::Integer(i) => ValueType::Integer(*i),
-            TokenValue::Float(f) => ValueType::Float(*f),
-            TokenValue::String(s) => ValueType::String(s.to_string().replace("\\n", "\n")),
-            TokenValue::Identifier(s) if s == "true" => ValueType::Boolean(true),
-            TokenValue::Identifier(s) if s == "false" => ValueType::Boolean(false),
-            _ => {
-                return Err("Invalid value".to_string());
-            }
-        };
-
-        let instruction = Instruction {
-            kind: InstructionKind::Push(),
-            params: vec![value],
-        };
-
-        Ok((instruction, next_token.1))
-    } else if token.value == TokenValue::Identifier("jmp".to_string()) {
-        let next_token = next(tokens, i).unwrap();
-        let label = next_token.0.value.to_string();
-
-        let instruction = Instruction {
-            kind: InstructionKind::Jump(),
-            params: vec![ValueType::String(label.clone())],
-        };
-
-        Ok((instruction, next_token.1))
-    } else if token.value == TokenValue::Identifier("jnz".to_string()) {
-        let next_token = next(tokens, i).unwrap();
-        let label = next_token.0.value.to_string();
-
-        let instruction = Instruction {
-            kind: InstructionKind::Jnz(),
-            params: vec![ValueType::String(label.clone())],
-        };
-
-        Ok((instruction, next_token.1))
-    } else if token.value == TokenValue::Identifier("jzr".to_string()) {
-        let next_token = next(tokens, i).unwrap();
-        let label = next_token.0.value.to_string();
-
-        let instruction = Instruction {
-            kind: InstructionKind::Jzr(),
-            params: vec![ValueType::String(label.clone())],
-        };
-
-        Ok((instruction, next_token.1))
-    } else if token.value == TokenValue::Identifier("typ".to_string()) {
-        let next_token = next(tokens, i).unwrap();
-        let label = next_token.0.value.to_string();
-
-        let instruction = Instruction {
-            kind: InstructionKind::Type(),
-            params: vec![ValueType::String(label.clone())],
-        };
-
-        Ok((instruction, *i))
-    } else if token.value == TokenValue::Identifier("prt".to_string()) {
-        if let Some((next_token, _)) = next(tokens, i) {
-            if next_token.value == TokenValue::Punctuation(",".to_string().parse().unwrap()) {
-                if let Some((next_token, _)) = next(tokens, i) {
-                    if next_token.value == TokenValue::Identifier("ln".to_string()) {
-                        let instruction = Instruction {
-                            kind: InstructionKind::Print,
-                            params: vec![ValueType::Boolean(true)],
-                        };
-                        return Ok((instruction, *i));
-                    }
-                }
-            }
-        }
-
-        let instruction = Instruction {
-            kind: InstructionKind::Print,
-            params: vec![],
-        };
-
-        Ok((instruction, *i))
-    } else if token.value == TokenValue::Identifier("run".to_string()) {
-        let next_token = next(tokens, i).unwrap();
-        let func = next_token.0.value.to_string();
-
-        let instruction = Instruction {
-            kind: InstructionKind::Run(),
-            params: vec![ValueType::String(func.clone())],
-        };
-
-        Ok((instruction, next_token.1))
+fn expect<'a>(tokens: &'a Vec<Token>, i: usize, kind: &str) -> Result<&'a Token, String> {    let t = current(tokens, i).unwrap();
+    if t.kind == kind {
+        Ok(t)
     } else {
-        let kind = match token.value {
-            TokenValue::Identifier(ref s) if s == "add" => InstructionKind::Add,
-            TokenValue::Identifier(ref s) if s == "sub" => InstructionKind::Sub,
-            TokenValue::Identifier(ref s) if s == "mul" => InstructionKind::Mul,
-            TokenValue::Identifier(ref s) if s == "div" => InstructionKind::Div,
-            TokenValue::Identifier(ref s) if s == "mod" => InstructionKind::Mod,
-            TokenValue::Identifier(ref s) if s == "inp" => InstructionKind::Input,
-            TokenValue::Identifier(ref s) if s == "pop" => InstructionKind::Pop,
-            TokenValue::Identifier(ref s) if s == "cmp" => InstructionKind::Cmp,
-            TokenValue::Identifier(ref s) if s == "dup" => InstructionKind::Dup,
-            TokenValue::Identifier(ref s) if s == "rot" => InstructionKind::Rot,
-            TokenValue::Identifier(ref s) if s == "ret" => InstructionKind::Ret,
-            TokenValue::Identifier(ref s) if s == "sys" => InstructionKind::Sys,
-            _ => return Err(format!("Invalid instruction: {:?}", token)),
-        };
-
-        let instruction = Instruction {
-            kind,
-            params: vec![],
-        };
-
-        Ok((instruction, *i))
+        Err(format!("Expected token of kind {}, got {:?}", kind, t))
     }
 }
 
@@ -208,33 +89,154 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, String> {
 
     let mut labels: HashMap<String, usize> = HashMap::new();
     let mut funcs: HashMap<String, usize> = HashMap::new();
+    let mut buffers: HashMap<String, i32> = HashMap::new();
 
     while i < tokens.len() {
-        let t = current(&tokens, &mut i).unwrap();
+        let t = current(&tokens, i).unwrap();
 
         match t.kind {
             "identifier" => {
-                let parsed = parse_identifier(&tokens, &mut i).expect("Failed to parse identifier");
-                instrs.push(parsed.0);
-                i = parsed.1 + 1;
+                if t.value == TokenValue::Identifier("psh".to_string()) {
+                    let next_token = next(&tokens, i).unwrap();
+                    let value = &next_token.value;
+                    let value = match value {
+                        TokenValue::Integer(i) => ValueType::Integer(*i),
+                        TokenValue::Float(f) => ValueType::Float(*f),
+                        TokenValue::String(s) => ValueType::String(s.to_string().replace("\\n", "\n")),
+                        TokenValue::Identifier(s) if s == "true" => ValueType::Boolean(true),
+                        TokenValue::Identifier(s) if s == "false" => ValueType::Boolean(false),
+                        TokenValue::Buffer(s) => {
+                            let _ = buffers.get(s).ok_or(format!("Buffer {} not found", s))?;
+                            ValueType::Buffer(s.to_string())
+                        },
+                        _ => {
+                            return Err("Invalid value for psh".to_string());
+                        }
+                    };
+
+                    i += 2;
+
+                    let instruction = Instruction {
+                        kind: InstructionKind::Push(),
+                        params: vec![value],
+                    };
+
+                    instrs.push(instruction);
+                } else if t.value == TokenValue::Identifier("jmp".to_string()) {
+                    let next_token = next(&tokens,  i).unwrap();
+                    let label = next_token.value.to_string();
+
+                    i += 2;
+
+                    let instruction = Instruction {
+                        kind: InstructionKind::Jump(),
+                        params: vec![ValueType::String(label.clone())],
+                    };
+
+                    instrs.push(instruction);
+                } else if t.value == TokenValue::Identifier("jnz".to_string()) {
+                    let next_token = next(&tokens, i).unwrap();
+                    let label = next_token.value.to_string();
+
+                    i += 2;
+
+                    let instruction = Instruction {
+                        kind: InstructionKind::Jnz(),
+                        params: vec![ValueType::String(label.clone())],
+                    };
+
+                    instrs.push(instruction);
+                } else if t.value == TokenValue::Identifier("jzr".to_string()) {
+                    let next_token = next(&tokens, i).unwrap();
+                    let label = next_token.value.to_string();
+
+                    i += 2;
+
+                    let instruction = Instruction {
+                        kind: InstructionKind::Jzr(),
+                        params: vec![ValueType::String(label.clone())],
+                    };
+
+                    instrs.push(instruction);
+                } else if t.value == TokenValue::Identifier("typ".to_string()) {
+                    let next_token = next(&tokens, i).unwrap();
+                    let label = next_token.value.to_string();
+
+                    i += 2;
+
+                    let instruction = Instruction {
+                        kind: InstructionKind::Type(),
+                        params: vec![ValueType::String(label.clone())],
+                    };
+
+                    instrs.push(instruction);
+                } else if t.value == TokenValue::Identifier("run".to_string()) {
+                    let next_token = next(&tokens, i).unwrap();
+                    let func = next_token.value.to_string();
+
+                    i += 2;
+
+                    let instruction = Instruction {
+                        kind: InstructionKind::Run(),
+                        params: vec![ValueType::String(func.clone())],
+                    };
+
+                    instrs.push(instruction);
+                } else if t.value == TokenValue::Identifier("alc".to_string()) {
+                    i += 1;
+                    let buffer_name = expect(&tokens, i, "buffer")?.value.to_string();
+                    i += 1;
+                    expect(&tokens, i, "punctuation")?;
+                    i += 1;
+                    let buffer_size = expect(&tokens, i, "integer")?.value.to_string().parse().unwrap();
+                    i += 1;
+
+                    buffers.insert(buffer_name, buffer_size);
+                } else {
+                    let kind = match t.value {
+                        TokenValue::Identifier(ref s) if s == "add" => InstructionKind::Add,
+                        TokenValue::Identifier(ref s) if s == "sub" => InstructionKind::Sub,
+                        TokenValue::Identifier(ref s) if s == "mul" => InstructionKind::Mul,
+                        TokenValue::Identifier(ref s) if s == "div" => InstructionKind::Div,
+                        TokenValue::Identifier(ref s) if s == "mod" => InstructionKind::Mod,
+                        TokenValue::Identifier(ref s) if s == "inp" => InstructionKind::Input,
+                        TokenValue::Identifier(ref s) if s == "pop" => InstructionKind::Pop,
+                        TokenValue::Identifier(ref s) if s == "cmp" => InstructionKind::Cmp,
+                        TokenValue::Identifier(ref s) if s == "dup" => InstructionKind::Dup,
+                        TokenValue::Identifier(ref s) if s == "rot" => InstructionKind::Rot,
+                        TokenValue::Identifier(ref s) if s == "ret" => InstructionKind::Ret,
+                        TokenValue::Identifier(ref s) if s == "sys" => InstructionKind::Sys,
+                        TokenValue::Identifier(ref s) if s == "len" => InstructionKind::Len,
+                        _ => return Err(format!("Invalid instruction: {:?}", t)),
+                    };
+
+                    i += 1;
+
+                    let instruction = Instruction {
+                        kind,
+                        params: vec![],
+                    };
+
+                    instrs.push(instruction);
+                }
             },
             "label" => {
-                if next(&tokens, &mut i).unwrap().0.value != TokenValue::Punctuation(":".parse().unwrap()) {
+                if next(&tokens, i).unwrap().value != TokenValue::Punctuation(":".parse().unwrap()) {
                     return Err("Parser: Expected ':' after label".to_string());
                 }
                 labels.insert(t.value.to_string(), instrs.len());
-                i += 1;
+                i += 2;
                 instrs.push(Instruction {
                     kind: InstructionKind::Label(),
                     params: vec![ValueType::String(t.value.to_string())],
                 });
             },
             "function" => {
-                if next(&tokens, &mut i).unwrap().0.value != TokenValue::Punctuation(":".parse().unwrap()) {
+                if next(&tokens, i).unwrap().value != TokenValue::Punctuation(":".parse().unwrap()) {
                     return Err("Parser: Expected ':' after function".to_string());
                 }
                 funcs.insert(t.value.to_string(), instrs.len());
-                i += 1;
+                i += 2;
                 instrs.push(Instruction {
                     kind: InstructionKind::Function(),
                     params: vec![ValueType::String(t.value.to_string())],
@@ -254,5 +256,6 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, String> {
         instrs,
         labels,
         funcs,
+        buffers,
     })
 }

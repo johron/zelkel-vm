@@ -9,6 +9,7 @@ pub enum TokenValue {
     Float(f32),
     String(String),
     Punctuation(char),
+    Buffer(String),
 }
 
 impl fmt::Display for TokenValue {
@@ -21,6 +22,7 @@ impl fmt::Display for TokenValue {
             TokenValue::Label(l) => write!(f, "{}", l),
             TokenValue::Punctuation(p) => write!(f, "{}", p),
             TokenValue::Function(fn_name) => write!(f, "{}", fn_name),
+            TokenValue::Buffer(b) => write!(f, "{}", b),
         }
     }
 }
@@ -68,6 +70,10 @@ pub fn lex(input: String) -> Result<Vec<Token>, String> {
         } else if c == '@' {
             let value = until(&chars, cur + 1, |c| c.is_alphanumeric());
             tokens.push(Token { kind: "function", value: TokenValue::Function("@".to_owned() + &*value.0) });
+            cur = value.1;
+        } else if c == '*' {
+            let value = until(&chars, cur + 1, |c| c.is_alphanumeric());
+            tokens.push(Token { kind: "buffer", value: TokenValue::Buffer("*".to_owned() + &*value.0) });
             cur = value.1;
         } else if c.is_digit(10) || c == '.' {
             let value = until(&chars, cur, |c| c.is_digit(10) || c == '.');

@@ -52,6 +52,7 @@ pub enum InstructionKind {
     Label(),
     Function(),
     Run(),
+    Sys,
 }
 
 #[derive(Debug, PartialEq)]
@@ -90,7 +91,7 @@ fn parse_identifier(tokens: &Vec<Token>, i: &mut usize) -> Result<(Instruction, 
         let value = match value {
             TokenValue::Integer(i) => ValueType::Integer(*i),
             TokenValue::Float(f) => ValueType::Float(*f),
-            TokenValue::String(s) => ValueType::String(s.to_string()),
+            TokenValue::String(s) => ValueType::String(s.to_string().replace("\\n", "\n")),
             TokenValue::Identifier(s) if s == "true" => ValueType::Boolean(true),
             TokenValue::Identifier(s) if s == "false" => ValueType::Boolean(false),
             _ => {
@@ -188,6 +189,7 @@ fn parse_identifier(tokens: &Vec<Token>, i: &mut usize) -> Result<(Instruction, 
             TokenValue::Identifier(ref s) if s == "dup" => InstructionKind::Dup,
             TokenValue::Identifier(ref s) if s == "rot" => InstructionKind::Rot,
             TokenValue::Identifier(ref s) if s == "ret" => InstructionKind::Ret,
+            TokenValue::Identifier(ref s) if s == "sys" => InstructionKind::Sys,
             _ => return Err(format!("Invalid instruction: {:?}", token)),
         };
 

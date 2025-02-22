@@ -1,20 +1,15 @@
-use crate::parser::ParserRet;
-
 mod parser;
 mod lexer;
 mod evaluator;
 
 fn main() {
     let code = String::from(r#"
-@helloworld:
-    psh "Hello, world!"
-    prt, ln
-    ret
 .entry:
-    run @helloworld
-.test:
+    psh 14
+    psh "Hello, world!\n"
     psh 1
-    prt, ln
+    psh 1
+    sys
 "#);
     let tokens = lexer::lex(code).expect("Failed to lex");
 

@@ -1,6 +1,7 @@
 use std::io::Write;
 use std::io;
 use crate::parser::{ValueType, InstructionKind, ParserRet};
+use syscalls;
 
 pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
     let instrs = parsed.instrs;
@@ -207,7 +208,7 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                 match a {
                     ValueType::Integer(i) => print!("{}{}", i, ln),
                     ValueType::Float(f) => print!("{}{}", f, ln),
-                    ValueType::String(s) => print!("{}{}", s.replace("\\n", "\n"), ln),
+                    ValueType::String(s) => print!("{}{}", s, ln),
                     ValueType::Boolean(b) => print!("{}{}", b, ln),
                     //_ => return Err(format!("Invalid type for print {:?}", a_clone)),
                 }
@@ -309,6 +310,39 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
             InstructionKind::Function() => {
                 is_in_func = true;
             },
+            InstructionKind::Sys => {
+                let syscall_number = stack.pop().ok_or("Sys: Stack underflow")?.clone();
+                let mut args = Vec::new();
+
+                for _ in 0..6 {
+                    if let Some(arg) = stack.pop() {
+                        args.push(arg);
+                    } else {
+                        args.push(ValueType::Integer(0)); // Default to 0 if not enough arguments
+                    }
+                }
+
+                let result = match syscall_number {
+                    ValueType::Integer(num) => {
+                        let syscall_args: Vec<usize> = args.iter().map(|arg| match arg {
+                            ValueType::Integer(i) => *i as usize,
+                            ValueType::Float(f) => *f as usize,
+                            ValueType::Boolean(b) => *b as usize,
+                            ValueType::String(s) => s.as_ptr() as usize,
+                        }).collect();
+
+                        unsafe {
+                            let syscall_num = syscalls::Sysno::from(num as u32);
+                            let syscall_args = syscalls::SyscallArgs::new(syscall_args[0], syscall_args[1], syscall_args[2], syscall_args[3], syscall_args[4], syscall_args[5]);
+                            let result = unsafe { syscalls::syscall(syscall_num, &syscall_args) };
+                            result
+                        }
+                    },
+                    _ => return Err("Sys: Invalid syscall number type".to_string()),
+                };
+
+                stack.push(ValueType::Integer(result.unwrap() as i32));
+            }
         }
 
         cur += 1;

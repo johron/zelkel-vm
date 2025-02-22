@@ -49,6 +49,7 @@ pub enum InstructionKind {
     Jzr(),
     Type(),
     Ret,
+    Label(),
 }
 
 #[derive(Debug, PartialEq)]
@@ -201,6 +202,10 @@ pub fn parse(tokens: Vec<Token>) -> Result<(Vec<Instruction>, HashMap<String, us
                 }
                 labels.insert(t.value.to_string(), instrs.len());
                 i += 1;
+                instrs.push(Instruction {
+                    kind: InstructionKind::Label(),
+                    params: vec![ValueType::String(t.value.to_string())],
+                });
             },
             _ => {
                 Err(format!("Unexpected token: {:?}", t))?;

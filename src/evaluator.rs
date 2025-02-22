@@ -21,6 +21,7 @@ pub fn evaluate(instrs: Vec<Instruction>, labels: HashMap<String, usize>) -> Res
                 stack.insert(0, a);
             },
             InstructionKind::Add => {
+                println!("{:?}", stack);
                 let a = stack.pop().ok_or("Add: Stack underflow")?.clone();
                 let b = stack.pop().ok_or("Add: Stack underflow")?.clone();
                 let a_clone = a.clone();
@@ -214,8 +215,8 @@ pub fn evaluate(instrs: Vec<Instruction>, labels: HashMap<String, usize>) -> Res
             },
             InstructionKind::Jump() => {
                 let label = instr.params[0].clone();
-                let i = labels.get(&label.to_string()).ok_or("Jump: Label not found")? - 1;
-                cur = i;
+                let i = labels.get(&label.to_string()).ok_or("Jump: Label not found")?;
+                cur = *i;
             },
             InstructionKind::Jnz() => {
                 let label = instr.params[0].clone();
@@ -281,6 +282,7 @@ pub fn evaluate(instrs: Vec<Instruction>, labels: HashMap<String, usize>) -> Res
 
                 return Ok((stack, a.to_int().expect("Ret: Invalid return value")));
             },
+            InstructionKind::Label() => {},
         }
 
         cur += 1;

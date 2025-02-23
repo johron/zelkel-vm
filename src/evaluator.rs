@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::io::Write;
 use std::io;
 use crate::parser::{ValueType, InstructionKind, ParserRet};
@@ -7,6 +8,7 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
     let instrs = parsed.instrs;
     let labels = parsed.labels;
     let funcs = parsed.funcs;
+    let buffers = parsed.buffers;
 
     let mut stack: Vec<ValueType> = Vec::new();
     let mut ret_stack: Vec<i32> = Vec::new();
@@ -317,10 +319,9 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                             ValueType::Float(f) => *f as usize,
                             ValueType::Boolean(b) => *b as usize,
                             ValueType::String(s) => s.as_ptr() as usize,
-                            ValueType::Buffer(s) => {
-                                let buffer_size = *parsed.buffers.get(&s).ok_or_else(|| format!("Buffer {} not found", s))?;
-                                const BUFFER_SIZE: i32 = buffer_size;
-                                return [0u8; BUFFER_SIZE as usize].as_mut_ptr() as usize;
+                            ValueType::Buffer(b) => {
+                                println!("hi: {}, {}", b.0, b.1);
+                                b.1
                             },
                         }).collect();
 
@@ -338,9 +339,34 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                 let a = stack.last().ok_or("Len: Stack underflow")?.clone();
                 let len = match a {
                     ValueType::String(s) => s.len(),
+                    ValueType::Buffer(b) => b.1,
                     _ => return Err("Len: Invalid type".to_string()),
                 };
                 stack.push(ValueType::Integer(len as i32));
+            },
+            InstructionKind::Print => {
+                let a = stack.pop().ok_or("Print: Stack underflow")?.clone();
+                let ln = match instr.params.get(0).cloned().unwrap_or(ValueType::Boolean(false)) {
+                    ValueType::Boolean(true) => "\n",
+                    ValueType::Boolean(false) => "",
+                    _ => return Err("Invalid type for print".to_string()),
+                };
+
+                //let a_clone = a.clone();
+                match a {
+                    ValueType::Integer(i) => print!("{}{}", i, ln),
+                    ValueType::Float(f) => print!("{}{}", f, ln),
+                    ValueType::String(s) => print!("{}{}", s, ln),
+                    ValueType::Boolean(b) => print!("{}{}", b, ln),
+                    ValueType::Buffer(b) => {
+                        println!("Buffer: {:?}", b);
+                        println!("name: '{}'", b.0);
+                        let buffer_size = buffers.get(&b.0).ok_or("Print: Buffer not found")?;
+                        let buf = unsafe { std::slice::from_raw_parts(b.1 as *const u8, buffer_size.clone() as usize) };
+                        println!("{:?}", buf);
+                    },
+                    //_ => return Err(format!("Invalid type for print {:?}", a_clone)),
+                }
             },
             _ => {
                 return Err("Invalid instruction".to_string())

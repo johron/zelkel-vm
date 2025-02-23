@@ -8,7 +8,7 @@ pub enum ValueType {
     Float(f32),
     String(String),
     Boolean(bool),
-    Buffer(String),
+    Buffer((String, usize)),
 }
 
 impl fmt::Display for ValueType {
@@ -18,6 +18,7 @@ impl fmt::Display for ValueType {
             ValueType::Float(fl) => write!(f, "{}", fl),
             ValueType::String(s) => write!(f, "{}", s),
             ValueType::Boolean(b) => write!(f, "{}", b),
+            ValueType::Buffer(b) => write!(f, "{:?}", b),
         }
     }
 }
@@ -46,6 +47,7 @@ pub enum InstructionKind {
     Sys,
     Len,
     Alloc,
+    Print,
 }
 
 #[derive(Debug, PartialEq)]
@@ -106,8 +108,8 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, String> {
                         TokenValue::Identifier(s) if s == "true" => ValueType::Boolean(true),
                         TokenValue::Identifier(s) if s == "false" => ValueType::Boolean(false),
                         TokenValue::Buffer(s) => {
-                            let _ = buffers.get(s).ok_or(format!("Buffer {} not found", s))?;
-                            ValueType::Buffer(s.to_string())
+                            let buffer_size = buffers.get(s).unwrap();
+                            ValueType::Buffer((s.to_string(), vec![0u8, *buffer_size as u8].as_mut_ptr() as usize))
                         },
                         _ => {
                             return Err("Invalid value for psh".to_string());
@@ -207,6 +209,7 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, String> {
                         TokenValue::Identifier(ref s) if s == "ret" => InstructionKind::Ret,
                         TokenValue::Identifier(ref s) if s == "sys" => InstructionKind::Sys,
                         TokenValue::Identifier(ref s) if s == "len" => InstructionKind::Len,
+                        TokenValue::Identifier(ref s) if s == "prt" => InstructionKind::Print,
                         _ => return Err(format!("Invalid instruction: {:?}", t)),
                     };
 

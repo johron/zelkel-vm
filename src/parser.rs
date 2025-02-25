@@ -97,7 +97,7 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, String> {
 
     let mut labels: HashMap<String, usize> = HashMap::new();
     let mut funcs: HashMap<String, usize> = HashMap::new();
-    let mut buffers: HashMap<String, i32> = HashMap::new();
+    let mut buffers: Vec<Buffer> = Vec::new();
 
     while i < tokens.len() {
         let t = current(&tokens, i).unwrap();
@@ -114,12 +114,11 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, String> {
                         TokenValue::Identifier(s) if s == "true" => ValueType::Boolean(true),
                         TokenValue::Identifier(s) if s == "false" => ValueType::Boolean(false),
                         TokenValue::Buffer(s) => {
-                            let buffer_size = buffers.get(s).unwrap();
-                            ValueType::Buffer(Buffer {
-                                name: s.to_string(),
-                                size: *buffer_size as usize,
-                                ptr: vec![0u8, *buffer_size as u8].as_mut_ptr() as usize,
-                            })
+                            if let Some(buffer) = buffers.iter().find(|b| &b.name == s) {
+                                ValueType::Buffer(buffer.clone())
+                            } else {
+                                return Err(format!("Buffer {} not found", s));
+                            }
                         },
                         _ => {
                             return Err("Invalid value for psh".to_string());
@@ -203,7 +202,11 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, String> {
                     let buffer_size = expect(&tokens, i, "integer")?.value.to_string().parse().unwrap();
                     i += 1;
 
-                    buffers.insert(buffer_name, buffer_size);
+                    buffers.push(Buffer {
+                        name: buffer_name,
+                        size: buffer_size,
+                        ptr: vec![0u8; buffer_size].as_mut_ptr() as usize,
+                    });
                 } else {
                     let kind = match t.value {
                         TokenValue::Identifier(ref s) if s == "add" => InstructionKind::Add,

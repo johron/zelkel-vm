@@ -361,8 +361,12 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                     ValueType::Buffer(b) => {
                         println!("buffer: '{:?}'", b);
                         let buffer_size = b.size;
-                        let bf = unsafe { std::slice::from_raw_parts(b.ptr as *const u8, buffer_size.clone() as usize) };
-                        println!("buffer: {:?}", bf);
+                        let buffer_ptr = b.ptr;
+
+                        let buffer_slice = unsafe { std::slice::from_raw_parts(buffer_ptr as *const u8, buffer_size) };
+                        println!("{:?}", buffer_slice);
+                        let buffer_str = std::str::from_utf8(buffer_slice).unwrap();
+                        print!("{}{}", buffer_str, ln);
                     },
                     //_ => return Err(format!("Invalid type for print {:?}", a_clone)),
                 }

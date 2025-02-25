@@ -8,7 +8,6 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
     let instrs = parsed.instrs;
     let labels = parsed.labels;
     let funcs = parsed.funcs;
-    let buffers = parsed.buffers;
 
     let mut stack: Vec<ValueType> = Vec::new();
     let mut ret_stack: Vec<i32> = Vec::new();
@@ -318,10 +317,11 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                             ValueType::Integer(i) => *i as usize,
                             ValueType::Float(f) => *f as usize,
                             ValueType::Boolean(b) => *b as usize,
-                            ValueType::String(s) => s.as_ptr() as usize,
+                            ValueType::String(s) => {
+                                s.as_ptr() as usize
+                            },
                             ValueType::Buffer(b) => {
-                                println!("hi: {}, {}", b.0, b.1);
-                                b.1
+                                b.ptr
                             },
                         }).collect();
 
@@ -339,7 +339,7 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                 let a = stack.last().ok_or("Len: Stack underflow")?.clone();
                 let len = match a {
                     ValueType::String(s) => s.len(),
-                    ValueType::Buffer(b) => b.1,
+                    ValueType::Buffer(b) => b.size,
                     _ => return Err("Len: Invalid type".to_string()),
                 };
                 stack.push(ValueType::Integer(len as i32));
@@ -359,11 +359,10 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                     ValueType::String(s) => print!("{}{}", s, ln),
                     ValueType::Boolean(b) => print!("{}{}", b, ln),
                     ValueType::Buffer(b) => {
-                        println!("Buffer: {:?}", b);
-                        println!("name: '{}'", b.0);
-                        let buffer_size = buffers.get(&b.0).ok_or("Print: Buffer not found")?;
-                        let buf = unsafe { std::slice::from_raw_parts(b.1 as *const u8, buffer_size.clone() as usize) };
-                        println!("{:?}", buf);
+                        println!("buffer: '{:?}'", b);
+                        let buffer_size = b.size;
+                        let bf = unsafe { std::slice::from_raw_parts(b.ptr as *const u8, buffer_size.clone() as usize) };
+                        println!("buffer: {:?}", bf);
                     },
                     //_ => return Err(format!("Invalid type for print {:?}", a_clone)),
                 }

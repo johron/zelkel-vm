@@ -12,17 +12,18 @@ fn main() {
     sys
     ret
 .entry:
-    psh "t: "
+    psh "input: "
     run @print
     alc *buffer, 128
-    psh 128
     psh *buffer
+    len
+    rot
     psh 0
     psh 0
     sys
     psh *buffer
     prt
-"#);
+"#); // kanskje det er noe her som gjør at navnet *buffer blir lagt til greier. når man nevner en identifier som er buffer endres navnet, ny buffer blir lagd, huske i en hashmap greie
     let tokens = lexer::lex(code).expect("Failed to lex");
 
     let parsed = parser::parse(tokens).expect("Failed to parse");

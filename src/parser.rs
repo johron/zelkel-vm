@@ -3,12 +3,19 @@ use std::fmt;
 use crate::lexer::{Token, TokenValue};
 
 #[derive(Debug, PartialEq, Clone)]
+pub struct Buffer {
+    pub name: String,
+    pub size: usize,
+    pub ptr: usize,
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub enum ValueType {
     Integer(i32),
     Float(f32),
     String(String),
     Boolean(bool),
-    Buffer((String, usize)),
+    Buffer(Buffer),
 }
 
 impl fmt::Display for ValueType {
@@ -61,7 +68,6 @@ pub struct ParserRet {
     pub instrs: Vec<Instruction>,
     pub labels: HashMap<String, usize>,
     pub funcs: HashMap<String, usize>,
-    pub buffers: HashMap<String, i32>,
 }
 
 fn current(tokens: &Vec<Token>, i: usize) -> Option<&Token> {
@@ -109,7 +115,11 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, String> {
                         TokenValue::Identifier(s) if s == "false" => ValueType::Boolean(false),
                         TokenValue::Buffer(s) => {
                             let buffer_size = buffers.get(s).unwrap();
-                            ValueType::Buffer((s.to_string(), vec![0u8, *buffer_size as u8].as_mut_ptr() as usize))
+                            ValueType::Buffer(Buffer {
+                                name: s.to_string(),
+                                size: *buffer_size as usize,
+                                ptr: vec![0u8, *buffer_size as u8].as_mut_ptr() as usize,
+                            })
                         },
                         _ => {
                             return Err("Invalid value for psh".to_string());
@@ -259,6 +269,5 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, String> {
         instrs,
         labels,
         funcs,
-        buffers,
     })
 }

@@ -6,6 +6,7 @@ use crate::lexer::{Token, TokenValue};
 pub struct Buffer {
     pub name: String,
     pub size: usize,
+    pub buffer: Vec<u8>,
     pub ptr: usize,
 }
 
@@ -202,10 +203,13 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, String> {
                     let buffer_size = expect(&tokens, i, "integer")?.value.to_string().parse().unwrap();
                     i += 1;
 
+                    let mut buffer = vec![0u8; buffer_size];
+
                     buffers.push(Buffer {
                         name: buffer_name,
                         size: buffer_size,
-                        ptr: vec![0u8; buffer_size].as_mut_ptr() as usize,
+                        buffer: buffer.clone(),
+                        ptr: buffer.as_mut_ptr() as usize,
                     });
                 } else {
                     let kind = match t.value {
@@ -222,7 +226,6 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, String> {
                         TokenValue::Identifier(ref s) if s == "ret" => InstructionKind::Ret,
                         TokenValue::Identifier(ref s) if s == "sys" => InstructionKind::Sys,
                         TokenValue::Identifier(ref s) if s == "len" => InstructionKind::Len,
-                        TokenValue::Identifier(ref s) if s == "prt" => InstructionKind::Print,
                         _ => return Err(format!("Invalid instruction: {:?}", t)),
                     };
 

@@ -1,8 +1,19 @@
 use std::collections::HashMap;
 use std::io::Write;
 use std::io;
-use crate::parser::{ValueType, InstructionKind, ParserRet};
+use crate::parser::{ValueType, InstructionKind, ParserRet, Buffer};
 use syscalls;
+
+fn ptr_to_vec(buf: Buffer) -> Vec<u8> {
+    let data = unsafe { std::slice::from_raw_parts(buf.ptr as *const u8, buf.size) };
+    data.to_vec()
+}
+
+fn trim_vec(buf: Vec<u8>) -> Vec<u8> {
+    let mut trimmed = buf.clone();
+    trimmed.retain(|&x| x != 0);
+    trimmed
+}
 
 pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
     let instrs = parsed.instrs;
@@ -189,6 +200,15 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                     (ValueType::Boolean(a), ValueType::Boolean(b)) => {
                         stack.push(ValueType::Boolean(a == b));
                     },
+                    (ValueType::Buffer(a), ValueType::Buffer(b)) => {
+                        stack.push(ValueType::Boolean(a.buffer == b.buffer));
+                    },
+                    (ValueType::Buffer(a), ValueType::String(b)) => {
+                        stack.push(ValueType::Boolean(trim_vec(ptr_to_vec(a)) == b.as_bytes()));
+                    },
+                    (ValueType::String(a), ValueType::Buffer(b)) => {
+                        stack.push(ValueType::Boolean(a.as_bytes() == trim_vec(ptr_to_vec(b))));
+                    },
                     _ => return Err(format!("Invalid types for equal {:?} {:?}", a_clone, b_clone)),
                 }
             }
@@ -325,9 +345,8 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                             },
                         }).collect();
 
-                        let syscall_num = syscalls::Sysno::from(num as u32);
                         let syscall_args = syscalls::SyscallArgs::new(syscall_args[0], syscall_args[1], syscall_args[2], syscall_args[3], syscall_args[4], syscall_args[5]);
-                        let result = unsafe { syscalls::syscall(syscall_num, &syscall_args) };
+                        let result = unsafe { syscalls::syscall(syscalls::Sysno::from(num as u32), &syscall_args) };
                         result
                     },
                     _ => return Err("Sys: Invalid syscall number type".to_string()),
@@ -343,33 +362,6 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                     _ => return Err("Len: Invalid type".to_string()),
                 };
                 stack.push(ValueType::Integer(len as i32));
-            },
-            InstructionKind::Print => {
-                let a = stack.pop().ok_or("Print: Stack underflow")?.clone();
-                let ln = match instr.params.get(0).cloned().unwrap_or(ValueType::Boolean(false)) {
-                    ValueType::Boolean(true) => "\n",
-                    ValueType::Boolean(false) => "",
-                    _ => return Err("Invalid type for print".to_string()),
-                };
-
-                //let a_clone = a.clone();
-                match a {
-                    ValueType::Integer(i) => print!("{}{}", i, ln),
-                    ValueType::Float(f) => print!("{}{}", f, ln),
-                    ValueType::String(s) => print!("{}{}", s, ln),
-                    ValueType::Boolean(b) => print!("{}{}", b, ln),
-                    ValueType::Buffer(b) => {
-                        println!("buffer: '{:?}'", b);
-                        let buffer_size = b.size;
-                        let buffer_ptr = b.ptr;
-
-                        let buffer_slice = unsafe { std::slice::from_raw_parts(buffer_ptr as *const u8, buffer_size) };
-                        println!("{:?}", buffer_slice);
-                        let buffer_str = std::str::from_utf8(buffer_slice).unwrap();
-                        print!("{}{}", buffer_str, ln);
-                    },
-                    //_ => return Err(format!("Invalid type for print {:?}", a_clone)),
-                }
             },
             _ => {
                 return Err("Invalid instruction".to_string())

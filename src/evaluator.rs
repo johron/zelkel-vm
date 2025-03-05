@@ -275,7 +275,10 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                     s if s == "int" => {
                         match a.parse::<i32>() {
                             Ok(i) => ValueType::Integer(i),
-                            Err(_) => return Err("Type: Invalid int".to_string()),
+                            Err(_) => match a.parse::<bool>() {
+                                Ok(b) => ValueType::Integer(b as i32),
+                                Err(_) => return Err("Type: Invalid int or bool".to_string()),
+                            },
                         }
                     },
                     s if s == "float" => {

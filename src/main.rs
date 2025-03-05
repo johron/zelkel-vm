@@ -15,6 +15,7 @@ fn main() {
     psh *buffer
     psh "test\n"
     cmp
+    typ int
 "#);
     let tokens = lexer::lex(code).expect("Failed to lex");
 

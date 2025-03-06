@@ -1,6 +1,4 @@
 use std::collections::HashMap;
-use std::io::Write;
-use std::io;
 use crate::parser::{ValueType, InstructionKind, ParserRet, Buffer};
 use syscalls;
 
@@ -226,13 +224,6 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                 let a = stack.last().ok_or("Dup: Stack underflow")?.clone();
                 stack.push(a);
             },
-            InstructionKind::Input => {
-                io::stdout().flush().expect("Failed to flush stdout");
-                let mut input = String::new();
-                io::stdin().read_line(&mut input).expect("Failed to read line");
-                let input = input.trim().to_string();
-                stack.push(ValueType::String(input));
-            },
             InstructionKind::Jump() => {
                 let label = instr.params[0].clone();
                 let i = labels.get(&label.to_string()).ok_or("Jump: Label not found")?;
@@ -375,9 +366,6 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                     _ => return Err("Len: Invalid type".to_string()),
                 };
                 stack.push(ValueType::Integer(len as i32));
-            },
-            _ => {
-                return Err("Invalid instruction".to_string())
             },
         }
 

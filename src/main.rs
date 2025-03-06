@@ -5,16 +5,7 @@ mod evaluator;
 fn main() {
     let code = String::from(r#"
 .entry:
-    psh 1
-    pop $x
-    psh 2
-    psh 3
-    add
-    psh $x
-    add
-    typ str
-    psh "\n"
-    add
+    psh "Hello, world!\n"
     len
     rot
     psh 1

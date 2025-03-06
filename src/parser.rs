@@ -45,7 +45,6 @@ pub enum InstructionKind {
     Pop(),
     Push(),
     Rot,
-    Input,
     Jump(),
     Jnz(),
     Jzr(),
@@ -56,8 +55,6 @@ pub enum InstructionKind {
     Run(),
     Sys,
     Len,
-    Alloc,
-    Print,
 }
 
 #[derive(Debug, PartialEq)]
@@ -81,7 +78,7 @@ fn current(tokens: &Vec<Token>, i: usize) -> Option<&Token> {
     }
 }
 
-fn next(tokens: &Vec<Token>, mut i: usize) -> Option<(&Token)> {
+fn next(tokens: &Vec<Token>, i: usize) -> Option<&Token> {
     let tok = current(tokens, i + 1);
     Some(tok?)
 }
@@ -247,7 +244,6 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, String> {
                         TokenValue::Keyword(ref s) if s == "mul" => InstructionKind::Mul,
                         TokenValue::Keyword(ref s) if s == "div" => InstructionKind::Div,
                         TokenValue::Keyword(ref s) if s == "mod" => InstructionKind::Mod,
-                        TokenValue::Keyword(ref s) if s == "inp" => InstructionKind::Input,
                         TokenValue::Keyword(ref s) if s == "cmp" => InstructionKind::Cmp,
                         TokenValue::Keyword(ref s) if s == "dup" => InstructionKind::Dup,
                         TokenValue::Keyword(ref s) if s == "rot" => InstructionKind::Rot,

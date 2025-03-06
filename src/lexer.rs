@@ -2,7 +2,7 @@ use std::fmt;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum TokenValue {
-    Identifier(String),
+    Keyword(String),
     Label(String),
     Function(String),
     Integer(i32),
@@ -10,6 +10,7 @@ pub enum TokenValue {
     String(String),
     Punctuation(char),
     Buffer(String),
+    Variable(String),
 }
 
 impl fmt::Display for TokenValue {
@@ -18,11 +19,12 @@ impl fmt::Display for TokenValue {
             TokenValue::Integer(i) => write!(f, "{}", i),
             TokenValue::Float(fl) => write!(f, "{}", fl),
             TokenValue::String(s) => write!(f, "{}", s),
-            TokenValue::Identifier(id) => write!(f, "{}", id),
+            TokenValue::Keyword(id) => write!(f, "{}", id),
             TokenValue::Label(l) => write!(f, "{}", l),
             TokenValue::Punctuation(p) => write!(f, "{}", p),
             TokenValue::Function(fn_name) => write!(f, "{}", fn_name),
             TokenValue::Buffer(b) => write!(f, "{}", b),
+            TokenValue::Variable(v) => write!(f, "{}", v),
         }
     }
 }
@@ -59,21 +61,25 @@ pub fn lex(input: String) -> Result<Vec<Token>, String> {
     while cur < chars.len() {
         let c = chars[cur];
         if c.is_alphabetic() {
-            let value = until(&chars, cur, |c| c.is_alphanumeric());
-            tokens.push(Token { kind: "identifier", value: TokenValue::Identifier(value.0) });
+            let value = until(&chars, cur, |c| c.is_alphanumeric() || c == '_');
+            tokens.push(Token { kind: "keyword", value: TokenValue::Keyword(value.0) });
             cur = value.1;
         } else if c == '.' && cur + 1 < chars.len() && chars[cur + 1].is_alphabetic() {
             cur += 1;
-            let value = until(&chars, cur, |c| c.is_alphanumeric());
+            let value = until(&chars, cur, |c| c.is_alphanumeric() || c == '_');
             tokens.push(Token { kind: "label", value: TokenValue::Label(".".to_owned() + &*value.0) });
             cur = value.1;
         } else if c == '@' {
-            let value = until(&chars, cur + 1, |c| c.is_alphanumeric());
+            let value = until(&chars, cur + 1, |c| c.is_alphanumeric() || c == '_');
             tokens.push(Token { kind: "function", value: TokenValue::Function("@".to_owned() + &*value.0) });
             cur = value.1;
         } else if c == '*' {
-            let value = until(&chars, cur + 1, |c| c.is_alphanumeric());
+            let value = until(&chars, cur + 1, |c| c.is_alphanumeric() || c == '_');
             tokens.push(Token { kind: "buffer", value: TokenValue::Buffer("*".to_owned() + &*value.0) });
+            cur = value.1;
+        } else if c == '$' {
+            let value = until(&chars, cur + 1, |c| c.is_alphanumeric() || c == '_');
+            tokens.push(Token { kind: "variable", value: TokenValue::Variable("$".to_owned() + &*value.0) });
             cur = value.1;
         } else if c.is_digit(10) || c == '.' {
             let value = until(&chars, cur, |c| c.is_digit(10) || c == '.');

@@ -5,17 +5,21 @@ mod evaluator;
 fn main() {
     let code = String::from(r#"
 .entry:
-    alc *buffer, 128
-    psh 128
-    psh *buffer
-    psh 0
-    psh 0
+    psh 1
+    pop $x
+    psh 2
+    psh 3
+    add
+    psh $x
+    add
+    typ str
+    psh "\n"
+    add
+    len
+    rot
+    psh 1
+    psh 1
     sys
-    pop
-    psh *buffer
-    psh "test\n"
-    cmp
-    typ int
 "#);
     let tokens = lexer::lex(code).expect("Failed to lex");
 

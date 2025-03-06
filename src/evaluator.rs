@@ -19,6 +19,7 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
     let instrs = parsed.instrs;
     let labels = parsed.labels;
     let funcs = parsed.funcs;
+    let mut vars: HashMap<String, ValueType> = HashMap::new();
 
     let mut stack: Vec<ValueType> = Vec::new();
     let mut ret_stack: Vec<i32> = Vec::new();
@@ -32,7 +33,12 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
         match instr.kind {
             InstructionKind::Push() => {
                 for param in &instr.params {
-                    stack.push(param.clone());
+                    if let ValueType::Variable(var_name) = param {
+                        let var = vars.get(var_name).ok_or("Push: Variable not found")?;
+                        stack.push(var.clone());
+                    } else {
+                        stack.push(param.clone());
+                    }
                 }
             },
             InstructionKind::Rot => {
@@ -42,7 +48,6 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                 stack.push(b);
             },
             InstructionKind::Add => {
-                println!("{:?}", stack);
                 let a = stack.pop().ok_or("Add: Stack underflow")?.clone();
                 let b = stack.pop().ok_or("Add: Stack underflow")?.clone();
                 let a_clone = a.clone();
@@ -212,8 +217,10 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                     _ => return Err(format!("Invalid types for equal {:?} {:?}", a_clone, b_clone)),
                 }
             }
-            InstructionKind::Pop => {
-                stack.pop();
+            InstructionKind::Pop() => {
+                let a = stack.pop().ok_or("Pop: Stack underflow")?;
+                let var_name = instr.params[0].clone().to_string();
+                vars.insert(var_name, a).map(|old| old);
             },
             InstructionKind::Dup => {
                 let a = stack.last().ok_or("Dup: Stack underflow")?.clone();
@@ -346,6 +353,9 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                             ValueType::Buffer(b) => {
                                 b.ptr
                             },
+                            ValueType::Variable(v) => {
+                                v.len()
+                            }
                         }).collect();
 
                         let syscall_args = syscalls::SyscallArgs::new(syscall_args[0], syscall_args[1], syscall_args[2], syscall_args[3], syscall_args[4], syscall_args[5]);

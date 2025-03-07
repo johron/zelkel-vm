@@ -206,12 +206,6 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                     (ValueType::Buffer(a), ValueType::Buffer(b)) => {
                         stack.push(ValueType::Boolean(a.buffer == b.buffer));
                     },
-                    (ValueType::Buffer(a), ValueType::String(b)) => {
-                        stack.push(ValueType::Boolean(trim_vec(ptr_to_vec(a)) == b.as_bytes()));
-                    },
-                    (ValueType::String(a), ValueType::Buffer(b)) => {
-                        stack.push(ValueType::Boolean(a.as_bytes() == trim_vec(ptr_to_vec(b))));
-                    },
                     _ => return Err(format!("Invalid types for equal {:?} {:?}", a_clone, b_clone)),
                 }
             }
@@ -265,6 +259,11 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                     ValueType::Integer(i) => i.to_string(),
                     ValueType::Float(f) => f.to_string(),
                     ValueType::Boolean(b) => b.to_string(),
+                    ValueType::Buffer(b) => {
+                        let buf = ptr_to_vec(b);
+                        let buf = trim_vec(buf);
+                        String::from_utf8(buf).unwrap()
+                    },
                     _ => return Err("Type: Invalid type".to_string()),
                     //_ => return Err("Type: Invalid type".to_string()),
                 };

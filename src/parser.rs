@@ -111,7 +111,9 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, String> {
                     let value = match value {
                         TokenValue::Integer(i) => ValueType::Integer(*i),
                         TokenValue::Float(f) => ValueType::Float(*f),
-                        TokenValue::String(s) => ValueType::String(s.to_string().replace("\\n", "\n")),
+                        TokenValue::String(s) => {
+                            ValueType::String(s.to_string())
+                        },
                         TokenValue::Keyword(s) if s == "true" => ValueType::Boolean(true),
                         TokenValue::Keyword(s) if s == "false" => ValueType::Boolean(false),
                         TokenValue::Buffer(s) => {

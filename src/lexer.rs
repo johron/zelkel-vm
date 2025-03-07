@@ -42,8 +42,20 @@ where
     let mut cur = start;
     let mut value = String::new();
     while cur < chars.len() && check(chars[cur]) {
-        value.push(chars[cur]);
-        cur += 1;
+        if chars[cur] == '\\' && cur + 1 < chars.len() {
+            cur += 1;
+            match chars[cur] {
+                'n' => value.push('\n'),
+                't' => value.push('\t'),
+                '\\' => value.push('\\'),
+                '"' => value.push('"'),
+                _ => value.push(chars[cur]),
+            }
+            cur += 1;
+        } else {
+            value.push(chars[cur]);
+            cur += 1;
+        }
     }
 
     (value, cur)
@@ -93,11 +105,10 @@ pub fn lex(input: String) -> Result<Vec<Token>, String> {
             cur = value.1;
         } else if c == '"' {
             let value = until(&chars, cur + 1, |c| c != '"');
-            if cur + value.0.len() + 1 >= chars.len() || chars[cur + value.0.len() + 1] != '"' {
-                return Err("Unclosed string literal".to_string());
-            }
-            tokens.push(Token { kind: "string", value: TokenValue::String(value.0) });
+            let string_value = value.0;
             cur = value.1 + 1;
+
+            tokens.push(Token { kind: "string", value: TokenValue::String(string_value) });
         } else if could_be(c, ":,") {
             tokens.push(Token { kind: "punctuation", value: TokenValue::Punctuation(c) });
             cur += 1;

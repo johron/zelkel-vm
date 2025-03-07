@@ -5,7 +5,15 @@ mod evaluator;
 fn main() {
     let code = String::from(r#"
 .entry:
-    psh "hey\n"
+    psh "cool"
+    dup
+    cmp
+    jzr .error
+    psh "Equal to 'cool'\n"
+    jmp .end
+.error:
+    psh "Not equal to 'cool'\n"
+.end:
     len
     rot
     psh 1

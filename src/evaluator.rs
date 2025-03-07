@@ -62,27 +62,6 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                         stack.push(ValueType::String(format!("{}{}", b, a)));
                     },
 
-                    (ValueType::Integer(a), ValueType::Float(b)) => {
-                        stack.push(ValueType::Float(a as f32 + b));
-                    },
-                    (ValueType::Float(a), ValueType::Integer(b)) => {
-                        stack.push(ValueType::Float(a + b as f32));
-                    },
-
-                    (ValueType::String(a), ValueType::Integer(b)) => {
-                        stack.push(ValueType::String(format!("{}{}", b, a)));
-                    },
-                    (ValueType::Integer(a), ValueType::String(b)) => {
-                        stack.push(ValueType::String(format!("{}{}", b, a)));
-                    },
-
-                    (ValueType::String(a), ValueType::Float(b)) => {
-                        stack.push(ValueType::String(format!("{}{}", b, a)));
-                    },
-                    (ValueType::Float(a), ValueType::String(b)) => {
-                        stack.push(ValueType::String(format!("{}{}", b, a)));
-                    },
-
                     _ => return Err(format!("Invalid types for add {:?} {:?}", a_clone, b_clone)),                        }
             },
             InstructionKind::Sub => {
@@ -97,13 +76,6 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                     },
                     (ValueType::Float(a), ValueType::Float(b)) => {
                         stack.push(ValueType::Float(a - b));
-                    },
-
-                    (ValueType::Integer(a), ValueType::Float(b)) => {
-                        stack.push(ValueType::Float(a as f32 - b));
-                    },
-                    (ValueType::Float(a), ValueType::Integer(b)) => {
-                        stack.push(ValueType::Float(a - b as f32));
                     },
 
                     _ => return Err(format!("Invalid types for sub {:?} {:?}", a_clone, b_clone)),
@@ -121,13 +93,6 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                     },
                     (ValueType::Float(a), ValueType::Float(b)) => {
                         stack.push(ValueType::Float(a * b));
-                    },
-
-                    (ValueType::Integer(a), ValueType::Float(b)) => {
-                        stack.push(ValueType::Float(a as f32 * b));
-                    },
-                    (ValueType::Float(a), ValueType::Integer(b)) => {
-                        stack.push(ValueType::Float(a * b as f32));
                     },
 
                     (ValueType::String(a), ValueType::Integer(b)) | (ValueType::Integer(b), ValueType::String(a)) => {
@@ -150,13 +115,6 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                         stack.push(ValueType::Float(a / b));
                     },
 
-                    (ValueType::Integer(a), ValueType::Float(b)) => {
-                        stack.push(ValueType::Float(b / a as f32));
-                    },
-                    (ValueType::Float(a), ValueType::Integer(b)) => {
-                        stack.push(ValueType::Float(a / b as f32));
-                    },
-
                     _ => return Err(format!("Invalid types for div {:?} {:?}", a_clone, b_clone)),
                 }
             },
@@ -172,13 +130,6 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                     },
                     (ValueType::Float(a), ValueType::Float(b)) => {
                         stack.push(ValueType::Float(a % b));
-                    },
-
-                    (ValueType::Integer(a), ValueType::Float(b)) => {
-                        stack.push(ValueType::Float(b % a as f32));
-                    },
-                    (ValueType::Float(a), ValueType::Integer(b)) => {
-                        stack.push(ValueType::Float(a % b as f32));
                     },
 
                     _ => return Err(format!("Invalid types for mod {:?} {:?}", a_clone, b_clone)),

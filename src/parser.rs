@@ -50,11 +50,11 @@ pub enum InstructionKind {
     Jzr(),
     Type(),
     Ret,
-    Label(),
-    Function(),
     Run(),
     Sys,
     Len,
+    Label(),
+    Function(),
 }
 
 #[derive(Debug, PartialEq)]
@@ -112,9 +112,7 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, String> {
                     let value = match value {
                         TokenValue::Integer(i) => ValueType::Integer(*i),
                         TokenValue::Float(f) => ValueType::Float(*f),
-                        TokenValue::String(s) => {
-                            ValueType::String(s.to_string())
-                        },
+                        TokenValue::String(s) => ValueType::String(s.clone()),
                         TokenValue::Identifier(s) if s == "true" => ValueType::Boolean(true),
                         TokenValue::Identifier(s) if s == "false" => ValueType::Boolean(false),
                         TokenValue::Buffer(s) => {

@@ -22,8 +22,6 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
     let mut stack: Vec<ValueType> = Vec::new();
     let mut ret_stack: Vec<i32> = Vec::new();
 
-    let mut is_in_func = false;
-
     let mut cur = *funcs.get("@entry").ok_or("Entry function not found")?;
 
     while cur < instrs.len() {
@@ -172,14 +170,12 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
             InstructionKind::Jump() => {
                 let label = instr.params[0].clone();
                 let i = labels.get(&label.to_string()).ok_or("Jump: Label not found")?;
-                is_in_func = false;
                 cur = *i;
             },
             InstructionKind::Jnz() => {
                 let label = instr.params[0].clone();
                 let i = labels.get(&label.to_string()).ok_or("Jnz: Label not found")? - 1;
                 let a = stack.pop().ok_or("Jnz: Stack underflow")?.clone();
-                is_in_func = false;
                 match a {
                     ValueType::Integer(n) => if n != 0 { cur = i; },
                     ValueType::Float(n) => if n != 0.0 { cur = i; },
@@ -191,7 +187,6 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                 let label = instr.params[0].clone();
                 let i = labels.get(&label.to_string()).ok_or("Jzr: Label not found")? - 1;
                 let a = stack.pop().ok_or("Jzr: Stack underflow")?.clone();
-                is_in_func = false;
                 match a {
                     ValueType::Integer(n) => if n == 0 { cur = i; },
                     ValueType::Float(n) => if n == 0.0 { cur = i; },
@@ -216,7 +211,6 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                         String::from_utf8(buf).unwrap()
                     },
                     _ => return Err("Type: Invalid type".to_string()),
-                    //_ => return Err("Type: Invalid type".to_string()),
                 };
 
                 let res = match label {
@@ -248,27 +242,15 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                 stack.push(res);
             },
             InstructionKind::Ret => {
-                if !is_in_func {
-                    return Err("Ret: Not in function".to_string());
-                }
                 let i = ret_stack.pop().ok_or("Ret: Stack underflow")?;
                 cur = i as usize;
-                is_in_func = false;
             },
             InstructionKind::Run() => {
                 let func = instr.params[0].clone();
                 let i = funcs.get(&func.to_string()).ok_or("Run: Function not found")?;
                 ret_stack.push(cur as i32);
-                is_in_func = true;
                 cur = *i;
-            },
-            InstructionKind::Label() => {
-                if is_in_func {
-                    return Err("Label: Label in function".to_string());
-                }
-            },
-            InstructionKind::Function() => {
-                is_in_func = true;
+
             },
             InstructionKind::Sys => {
                 let syscall_number = stack.pop().ok_or("Sys: Stack underflow")?.clone();
@@ -317,6 +299,8 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                 };
                 stack.push(ValueType::Integer(len as i32));
             },
+            InstructionKind::Label() => {},
+            InstructionKind::Function() => {},
         }
 
         cur += 1;

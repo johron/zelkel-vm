@@ -2,7 +2,7 @@ use std::fmt;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum TokenValue {
-    Keyword(String),
+    Identifier(String),
     Label(String),
     Function(String),
     Integer(i32),
@@ -19,7 +19,7 @@ impl fmt::Display for TokenValue {
             TokenValue::Integer(i) => write!(f, "{}", i),
             TokenValue::Float(fl) => write!(f, "{}", fl),
             TokenValue::String(s) => write!(f, "{}", s),
-            TokenValue::Keyword(id) => write!(f, "{}", id),
+            TokenValue::Identifier(id) => write!(f, "{}", id),
             TokenValue::Label(l) => write!(f, "{}", l),
             TokenValue::Punctuation(p) => write!(f, "{}", p),
             TokenValue::Function(fn_name) => write!(f, "{}", fn_name),
@@ -74,7 +74,7 @@ pub fn lex(input: String) -> Result<Vec<Token>, String> {
         let c = chars[cur];
         if c.is_alphabetic() {
             let value = until(&chars, cur, |c| c.is_alphanumeric() || c == '_');
-            tokens.push(Token { kind: "keyword", value: TokenValue::Keyword(value.0) });
+            tokens.push(Token { kind: "identifier", value: TokenValue::Identifier(value.0) });
             cur = value.1;
         } else if c == '.' && cur + 1 < chars.len() && chars[cur + 1].is_alphabetic() {
             cur += 1;

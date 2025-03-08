@@ -4,21 +4,17 @@ mod evaluator;
 
 fn main() {
     let code = String::from(r#"
-.entry:
-    psh "cool"
-    dup
-    cmp
-    jzr .error
-    psh "Equal to 'cool'\n"
-    jmp .end
-.error:
-    psh "Not equal to 'cool'\n"
-.end:
+@entry:
+    psh 123
+    typ str
+    psh "\n"
+    add
     len
     rot
     psh 1
     psh 1
     sys
+    pop $_
 "#);
     let tokens = lexer::lex(code).expect("Failed to lex");
 

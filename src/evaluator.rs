@@ -24,7 +24,7 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
 
     let mut is_in_func = false;
 
-    let mut cur = *labels.get(".entry").ok_or("Entry label not found")?;
+    let mut cur = *funcs.get("@entry").ok_or("Entry function not found")?;
 
     while cur < instrs.len() {
         let instr = instrs.get(cur).ok_or("Instruction not found")?;

@@ -20,7 +20,7 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
     let mut vars: HashMap<String, ValueType> = HashMap::new();
 
     let mut stack: Vec<ValueType> = Vec::new();
-    let mut ret_stack: Vec<i32> = Vec::new();
+    let mut ret_stack: Vec<usize> = Vec::new();
 
     let mut cur = *funcs.get("@entry").ok_or("Entry function not found")?;
 
@@ -242,13 +242,17 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                 stack.push(res);
             },
             InstructionKind::Ret => {
-                let i = ret_stack.pop().ok_or("Ret: Stack underflow")?;
-                cur = i as usize;
+                if let Some(i) = ret_stack.pop() {
+                    cur = i;
+                } else {
+                    let a = stack.pop().ok_or("Ret: Stack underflow")?;
+                    return Ok((stack, a.to_int()?));
+                }
             },
             InstructionKind::Run() => {
                 let func = instr.params[0].clone();
                 let i = funcs.get(&func.to_string()).ok_or("Run: Function not found")?;
-                ret_stack.push(cur as i32);
+                ret_stack.push(cur);
                 cur = *i;
 
             },

@@ -33,6 +33,19 @@ impl fmt::Display for ValueType {
     }
 }
 
+impl ValueType {
+    pub fn to_int(&self) -> Result<i32, String> {
+        match self {
+            ValueType::Integer(i) => Ok(*i),
+            ValueType::Float(f) => Ok(*f as i32),
+            ValueType::String(s) => s.parse::<i32>().map_err(|_| "Cannot convert string to int".to_string()),
+            ValueType::Boolean(b) => Ok(*b as i32),
+            ValueType::Buffer(_) => Err("Cannot convert buffer to int".to_string()),
+            ValueType::Variable(_) => Err("Cannot convert variable to int".to_string()),
+        }
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub enum InstructionKind {
     Add,

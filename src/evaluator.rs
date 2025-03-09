@@ -27,7 +27,7 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
     while cur < instrs.len() {
         let instr = instrs.get(cur).ok_or("Instruction not found")?;
         match instr.kind {
-            InstructionKind::Push() => {
+            InstructionKind::Psh => {
                 for param in &instr.params {
                     if let ValueType::Variable(var_name) = param {
                         let var = vars.get(var_name).ok_or("Push: Variable not found")?;
@@ -36,7 +36,7 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                         stack.push(param.clone());
                     }
                 }
-            },
+            }
             InstructionKind::Rot => {
                 let a = stack.pop().ok_or("Rot: Stack underflow")?.clone();
                 let b = stack.pop().ok_or("Rot: Stack underflow")?.clone();
@@ -158,7 +158,7 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                     _ => return Err(format!("Invalid types for equal {:?} {:?}", a_clone, b_clone)),
                 }
             }
-            InstructionKind::Pop() => {
+            InstructionKind::Pop => {
                 let a = stack.pop().ok_or("Pop: Stack underflow")?;
                 let var_name = instr.params[0].clone().to_string();
                 vars.insert(var_name, a).map(|old| old);
@@ -167,12 +167,12 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                 let a = stack.last().ok_or("Dup: Stack underflow")?.clone();
                 stack.push(a);
             },
-            InstructionKind::Jump() => {
+            InstructionKind::Jmp => {
                 let label = instr.params[0].clone();
                 let i = labels.get(&label.to_string()).ok_or("Jump: Label not found")?;
                 cur = *i;
-            },
-            InstructionKind::Jnz() => {
+            }
+            InstructionKind::Jnz => {
                 let label = instr.params[0].clone();
                 let i = labels.get(&label.to_string()).ok_or("Jnz: Label not found")? - 1;
                 let a = stack.pop().ok_or("Jnz: Stack underflow")?.clone();
@@ -183,7 +183,7 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                     ValueType::Boolean(n) => if n { cur = i; },
                     _ => return Err("Jnz: Invalid type".to_string()),
                 }
-            },InstructionKind::Jzr() => {
+            },InstructionKind::Jzr => {
                 let label = instr.params[0].clone();
                 let i = labels.get(&label.to_string()).ok_or("Jzr: Label not found")? - 1;
                 let a = stack.pop().ok_or("Jzr: Stack underflow")?.clone();
@@ -195,7 +195,7 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                     _ => return Err("Jzr: Invalid type".to_string()),
                 }
             },
-            InstructionKind::Type() => {
+            InstructionKind::Type => {
                 let label = match instr.params[0].clone() {
                     ValueType::String(s) => s,
                     _ => return Err("Type: Invalid type".to_string()),
@@ -249,7 +249,7 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                     return Ok((stack, a.to_int()?));
                 }
             },
-            InstructionKind::Run() => {
+            InstructionKind::Run => {
                 let func = instr.params[0].clone();
                 let i = funcs.get(&func.to_string()).ok_or("Run: Function not found")?;
                 ret_stack.push(cur);
@@ -303,8 +303,21 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                 };
                 stack.push(ValueType::Integer(len as i32));
             },
-            InstructionKind::Label() => {},
-            InstructionKind::Function() => {},
+            InstructionKind::Dlc => {
+                let a = instr.params[0].clone();
+                match a {
+                    ValueType::Buffer(b) => {
+                        return Err("Dlc: Buffer not implemented".to_string());
+                    },
+                    ValueType::Variable(v) => {
+                        vars.remove(&v);
+                    },
+                    _ => return Err("Dlc: Invalid type".to_string()),
+                };
+            }
+            InstructionKind::Lbl => {}
+            InstructionKind::Fun => {}
+            InstructionKind::Alc => {},
         }
 
         cur += 1;

@@ -42,7 +42,7 @@ fn parse_push_int() {
     let result = parser::parse(tokens);
     assert_eq!(result, Ok(vec![
             parser::Instruction {
-                kind: parser::InstructionKind::Push(),
+                kind: parser::InstructionKind::Psh(),
                 params: vec![parser::ValueType::Integer(5)],
             }
     ]));
@@ -57,7 +57,7 @@ fn parse_push_float() {
     let result = parser::parse(tokens);
     assert_eq!(result, Ok(vec![
         parser::Instruction {
-            kind: parser::InstructionKind::Push(),
+            kind: parser::InstructionKind::Psh(),
             params: vec![parser::ValueType::Float(3.14)],
         }
     ]));
@@ -72,7 +72,7 @@ fn parse_push_string() {
     let result = parser::parse(tokens);
     assert_eq!(result, Ok(vec![
         parser::Instruction {
-            kind: parser::InstructionKind::Push(),
+            kind: parser::InstructionKind::Psh(),
             params: vec![parser::ValueType::String("hello".to_string())],
         }
     ]));
@@ -96,11 +96,11 @@ fn parse_add() {
 fn evaluate_5_plus_3() {
     let nodes = vec![
         parser::Instruction {
-            kind: parser::InstructionKind::Push(),
+            kind: parser::InstructionKind::Psh(),
             params: vec![parser::ValueType::Integer(5)],
         },
         parser::Instruction {
-            kind: parser::InstructionKind::Push(),
+            kind: parser::InstructionKind::Psh(),
             params: vec![parser::ValueType::Integer(3)],
         },
         parser::Instruction {

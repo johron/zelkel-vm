@@ -55,19 +55,21 @@ pub enum InstructionKind {
     Mod,
     Cmp,
     Dup,
-    Pop(),
-    Push(),
+    Pop,
+    Psh,
     Rot,
-    Jump(),
-    Jnz(),
-    Jzr(),
-    Type(),
+    Jmp,
+    Jnz,
+    Jzr,
+    Type,
     Ret,
-    Run(),
+    Run,
     Sys,
     Len,
-    Label(),
-    Function(),
+    Lbl,
+    Fun,
+    Dlc,
+    Alc,
 }
 
 #[derive(Debug, PartialEq)]
@@ -150,7 +152,7 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, String> {
                     i += 2;
 
                     let instruction = Instruction {
-                        kind: InstructionKind::Push(),
+                        kind: InstructionKind::Psh,
                         params: vec![value],
                     };
 
@@ -161,7 +163,7 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, String> {
                     i += 1;
 
                     let instruction = Instruction {
-                        kind: InstructionKind::Jump(),
+                        kind: InstructionKind::Jmp,
                         params: vec![ValueType::String(label.clone())],
                     };
 
@@ -172,7 +174,7 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, String> {
                     i += 1;
 
                     let instruction = Instruction {
-                        kind: InstructionKind::Jnz(),
+                        kind: InstructionKind::Jnz,
                         params: vec![ValueType::String(label.clone())],
                     };
 
@@ -183,7 +185,7 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, String> {
                     i += 1;
 
                     let instruction = Instruction {
-                        kind: InstructionKind::Jzr(),
+                        kind: InstructionKind::Jzr,
                         params: vec![ValueType::String(label.clone())],
                     };
 
@@ -194,7 +196,7 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, String> {
                     i += 1;
 
                     let instruction = Instruction {
-                        kind: InstructionKind::Type(),
+                        kind: InstructionKind::Type,
                         params: vec![ValueType::String(ident.clone())],
                     };
 
@@ -205,7 +207,7 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, String> {
                     i += 1;
 
                     let instruction = Instruction {
-                        kind: InstructionKind::Run(),
+                        kind: InstructionKind::Run,
                         params: vec![ValueType::String(func.clone())],
                     };
 
@@ -231,6 +233,13 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, String> {
                         buffer: buffer.clone(),
                         ptr: buffer.as_mut_ptr() as usize,
                     });
+
+                    let instruction = Instruction {
+                        kind: InstructionKind::Alc,
+                        params: vec![],
+                    };
+
+                    instrs.push(instruction);
                 } else if t.value == TokenValue::Identifier("pop".to_string()) {
                     i += 1;
                     let var_name = expect(&tokens, i, "variable")?.value.to_string();
@@ -241,8 +250,36 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, String> {
                     }
 
                     let instruction = Instruction {
-                        kind: InstructionKind::Pop(),
+                        kind: InstructionKind::Pop,
                         params: vec![ValueType::String(var_name.clone())],
+                    };
+
+                    instrs.push(instruction);
+                } else if t.value == TokenValue::Identifier("dlc".to_string()) {
+                    let next_token = next(&tokens, i).unwrap();
+                    let value = match next_token.kind.to_string().as_str() {
+                        "variable" => {
+                            let var_name = next_token.value.to_string();
+                            if vars.iter().find(|&b| b == &var_name).is_none() {
+                                return Err(format!("Variable {} not found", var_name));
+                            }
+                            ValueType::Variable(var_name)
+                        },
+                        "buffer" => {
+                            let buffer_name = next_token.value.to_string();
+                            if let Some(buffer) = buffers.iter().find(|b| &b.name == &buffer_name) {
+                                ValueType::Buffer(buffer.clone())
+                            } else {
+                                return Err(format!("Buffer {} not found", buffer_name));
+                            }
+                        },
+                        _ => return Err("Expected variable or buffer".to_string()),
+                    };
+
+                    i += 2;
+                    let instruction = Instruction {
+                        kind: InstructionKind::Dlc,
+                        params: vec![value],
                     };
 
                     instrs.push(instruction);
@@ -285,7 +322,7 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, String> {
 
                 labels.insert(t.value.to_string(), instrs.len());
                 instrs.push(Instruction {
-                    kind: InstructionKind::Label(),
+                    kind: InstructionKind::Lbl,
                     params: vec![ValueType::String(t.value.to_string())],
                 });
             },
@@ -302,7 +339,7 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, String> {
 
                 funcs.insert(t.value.to_string(), instrs.len());
                 instrs.push(Instruction {
-                    kind: InstructionKind::Function(),
+                    kind: InstructionKind::Fun,
                     params: vec![ValueType::String(t.value.to_string())],
                 });
             },

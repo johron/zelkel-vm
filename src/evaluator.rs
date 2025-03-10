@@ -1,6 +1,13 @@
 use std::collections::HashMap;
-use crate::parser::{ValueType, InstructionKind, ParserRet, Buffer};
+use crate::parser::{ValueType, InstructionKind, ParserRet};
 use syscalls;
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct Buffer {
+    pub data: Vec<u8>,
+    pub size: usize,
+    pub ptr: usize,
+}
 
 fn ptr_to_vec(buf: Buffer) -> Vec<u8> {
     let data = unsafe { std::slice::from_raw_parts(buf.ptr as *const u8, buf.size) };
@@ -13,12 +20,34 @@ fn trim_vec(buf: Vec<u8>) -> Vec<u8> {
     trimmed
 }
 
+#[derive(Debug, PartialEq, Clone)]
+pub enum HeapType {
+    Buffer(Buffer),
+    Variable(ValueType),
+}
+
+impl HeapType {
+    pub fn to_vtype(self) -> Result<ValueType, String> {
+        match self {
+            HeapType::Buffer(b) => Err("HeapType: Buffer cannot be converted to ValueType".to_string()),
+            HeapType::Variable(v) => Ok(v),
+        }
+    }
+
+    pub fn to_buffer(self) -> Result<Buffer, String> {
+        match self {
+            HeapType::Buffer(b) => Ok(b),
+            HeapType::Variable(v) => Err("HeapType: Variable cannot be converted to Buffer".to_string()),
+        }
+    }
+}
+
 pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
     let instrs = parsed.instrs;
     let labels = parsed.labels;
     let funcs = parsed.funcs;
 
-    let mut heap: HashMap<String, ValueType> = HashMap::new();
+    let mut heap: HashMap<String, HeapType> = HashMap::new();
 
     let mut stack: Vec<ValueType> = Vec::new();
     let mut ret_stack: Vec<usize> = Vec::new();
@@ -31,8 +60,8 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
             InstructionKind::Psh => {
                 for param in &instr.params {
                     if let ValueType::Variable(var_name) = param {
-                        let var = vars.get(var_name).ok_or("Push: Variable not found")?;
-                        stack.push(var.clone());
+                        let var = heap.get(var_name).ok_or("Push: Variable not found")?;
+                        stack.push(var.clone().to_vtype()?);
                     } else {
                         stack.push(param.clone());
                     }
@@ -153,16 +182,13 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                     (ValueType::Boolean(a), ValueType::Boolean(b)) => {
                         stack.push(ValueType::Boolean(a == b));
                     },
-                    (ValueType::Buffer(a), ValueType::Buffer(b)) => {
-                        stack.push(ValueType::Boolean(a.buffer == b.buffer));
-                    },
                     _ => return Err(format!("Invalid types for equal {:?} {:?}", a_clone, b_clone)),
                 }
             }
             InstructionKind::Pop => {
                 let a = stack.pop().ok_or("Pop: Stack underflow")?;
                 let var_name = instr.params[0].clone().to_string();
-                vars.insert(var_name, a).map(|old| old);
+                heap.insert(var_name, HeapType::Variable(a)).map(|old| old);
             },
             InstructionKind::Dup => {
                 let a = stack.last().ok_or("Dup: Stack underflow")?.clone();
@@ -207,9 +233,10 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                     ValueType::Float(f) => f.to_string(),
                     ValueType::Boolean(b) => b.to_string(),
                     ValueType::Buffer(b) => {
-                        let buf = ptr_to_vec(b);
-                        let buf = trim_vec(buf);
-                        String::from_utf8(buf).unwrap()
+                        let buf = heap.get(&b).ok_or("Type: Buffer not found")?.clone().to_buffer()?;
+                        let vec = ptr_to_vec(buf);
+                        let trimmed_vec = trim_vec(vec);
+                        String::from_utf8(trimmed_vec).unwrap()
                     },
                     _ => return Err("Type: Invalid type".to_string()),
                 };
@@ -279,7 +306,8 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                                 s.as_ptr() as usize
                             },
                             ValueType::Buffer(b) => {
-                                b.ptr
+                                let buf = heap.get(&b).ok_or("Sys: Buffer not found").unwrap().clone().to_buffer().unwrap();;
+                                buf.ptr
                             },
                             ValueType::Variable(v) => {
                                 v.len()
@@ -299,7 +327,10 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                 let a = stack.last().ok_or("Len: Stack underflow")?.clone();
                 let len = match a {
                     ValueType::String(s) => s.len(),
-                    ValueType::Buffer(b) => b.size,
+                    ValueType::Buffer(b) => {
+                        let buf = heap.get(&b).ok_or("Len: Buffer not found")?.clone().to_buffer()?;
+                        buf.size
+                    },
                     _ => return Err("Len: Invalid type".to_string()),
                 };
                 stack.push(ValueType::Integer(len as i32));
@@ -308,17 +339,30 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                 let a = instr.params[0].clone();
                 match a {
                     ValueType::Buffer(b) => {
-                        return Err("Dlc: Buffer not implemented".to_string());
+                        heap.remove(&b);
                     },
                     ValueType::Variable(v) => {
-                        vars.remove(&v);
+                        heap.remove(&v);
                     },
                     _ => return Err("Dlc: Invalid type".to_string()),
                 };
             }
             InstructionKind::Lbl => {}
             InstructionKind::Fun => {}
-            InstructionKind::Alc => {},
+            InstructionKind::Alc => {
+                let name = instr.params[0].clone().to_string();
+                let size = instr.params[1].to_int()? as usize;
+                let data = vec![0u8; size];
+                let ptr = data.clone().as_mut_ptr() as usize;
+
+                let buffer = Buffer {
+                    data,
+                    size,
+                    ptr,
+                };
+
+                heap.insert(name, HeapType::Buffer(buffer));
+            },
         }
 
         cur += 1;

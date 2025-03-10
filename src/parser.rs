@@ -3,14 +3,6 @@ use std::fmt;
 use crate::lexer::{Token, TokenValue};
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct Buffer {
-    pub name: String,
-    pub size: usize,
-    pub buffer: Vec<u8>,
-    pub ptr: usize,
-}
-
-#[derive(Debug, PartialEq, Clone)]
 pub enum ValueType {
     Integer(i32),
     Float(f32),
@@ -134,14 +126,12 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, String> {
                             if bufs.iter().find(|&b| b == s).is_none() {
                                 return Err(format!("Variable {} not found", s));
                             }
-
                             ValueType::Buffer(s.to_string())
                         },
                         TokenValue::Variable(s) => {
                             if vars.iter().find(|&b| b == s).is_none() {
                                 return Err(format!("Variable {} not found", s));
                             }
-
                             ValueType::Variable(s.to_string())
                         },
                         _ => {
@@ -260,11 +250,10 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, String> {
                         },
                         "buffer" => {
                             let buffer_name = next_token.value.to_string();
-                            if let Some(buffer) = bufs.iter().find(|b| &b == &buffer_name) {
-                                ValueType::Buffer(buffer.clone())
-                            } else {
+                            if bufs.iter().find(|&b| b == &buffer_name).is_none() {
                                 return Err(format!("Buffer {} not found", buffer_name));
                             }
+                            ValueType::Buffer(buffer_name)
                         },
                         _ => return Err("Expected variable or buffer".to_string()),
                     };

@@ -17,7 +17,8 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
     let instrs = parsed.instrs;
     let labels = parsed.labels;
     let funcs = parsed.funcs;
-    let mut vars: HashMap<String, ValueType> = HashMap::new();
+
+    let mut heap: HashMap<String, ValueType> = HashMap::new();
 
     let mut stack: Vec<ValueType> = Vec::new();
     let mut ret_stack: Vec<usize> = Vec::new();

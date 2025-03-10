@@ -16,7 +16,7 @@ pub enum ValueType {
     Float(f32),
     String(String),
     Boolean(bool),
-    Buffer(Buffer),
+    Buffer(String),
     Variable(String),
 }
 
@@ -113,7 +113,7 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, String> {
 
     let mut labels: HashMap<String, usize> = HashMap::new();
     let mut funcs: HashMap<String, usize> = HashMap::new();
-    let mut buffers: Vec<Buffer> = Vec::new();
+    let mut bufs: Vec<String> = Vec::new();
     let mut vars: Vec<String> = Vec::new();
 
     while i < tokens.len() {
@@ -131,11 +131,11 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, String> {
                         TokenValue::Identifier(s) if s == "true" => ValueType::Boolean(true),
                         TokenValue::Identifier(s) if s == "false" => ValueType::Boolean(false),
                         TokenValue::Buffer(s) => {
-                            if let Some(buffer) = buffers.iter().find(|b| &b.name == s) {
-                                ValueType::Buffer(buffer.clone())
-                            } else {
-                                return Err(format!("Buffer {} not found", s));
+                            if bufs.iter().find(|&b| b == s).is_none() {
+                                return Err(format!("Variable {} not found", s));
                             }
+
+                            ValueType::Buffer(s.to_string())
                         },
                         TokenValue::Variable(s) => {
                             if vars.iter().find(|&b| b == s).is_none() {
@@ -215,7 +215,7 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, String> {
                 } else if t.value == TokenValue::Identifier("alc".to_string()) {
                     i += 1;
                     let buffer_name = expect(&tokens, i, "buffer")?.value.to_string();
-                    if buffers.iter().find(|b| &b.name == &buffer_name).is_some() {
+                    if bufs.iter().find(|b| &b == &&&buffer_name).is_some() {
                         return Err(format!("Buffer {} already exists", buffer_name));
                     }
 
@@ -225,18 +225,11 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, String> {
                     let buffer_size = expect(&tokens, i, "integer")?.value.to_string().parse().unwrap();
                     i += 1;
 
-                    let mut buffer = vec![0u8; buffer_size];
-
-                    buffers.push(Buffer {
-                        name: buffer_name,
-                        size: buffer_size,
-                        buffer: buffer.clone(),
-                        ptr: buffer.as_mut_ptr() as usize,
-                    });
+                    bufs.push(buffer_name.clone());
 
                     let instruction = Instruction {
                         kind: InstructionKind::Alc,
-                        params: vec![],
+                        params: vec![ValueType::Buffer(buffer_name.clone()), ValueType::Integer(buffer_size)],
                     };
 
                     instrs.push(instruction);
@@ -251,7 +244,7 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, String> {
 
                     let instruction = Instruction {
                         kind: InstructionKind::Pop,
-                        params: vec![ValueType::String(var_name.clone())],
+                        params: vec![ValueType::Variable(var_name.clone())],
                     };
 
                     instrs.push(instruction);
@@ -267,7 +260,7 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, String> {
                         },
                         "buffer" => {
                             let buffer_name = next_token.value.to_string();
-                            if let Some(buffer) = buffers.iter().find(|b| &b.name == &buffer_name) {
+                            if let Some(buffer) = bufs.iter().find(|b| &b == &buffer_name) {
                                 ValueType::Buffer(buffer.clone())
                             } else {
                                 return Err(format!("Buffer {} not found", buffer_name));

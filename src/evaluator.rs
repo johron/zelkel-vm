@@ -330,10 +330,10 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
             InstructionKind::Lbl => {}
             InstructionKind::Fun => {}
             InstructionKind::Alc => {
-                let name = instr.params[0].clone().to_string().replace('"', "");
+                let name = instr.params[0].clone().to_string();
                 let size = instr.params[1].to_int()? as usize;
-                let data = vec![0u8; size];
-                let ptr = data.clone().as_mut_ptr() as usize;
+                let mut data = vec![0u8; size];
+                let ptr = data.as_mut_ptr() as usize;
 
                 let buffer = Buffer {
                     data,

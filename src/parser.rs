@@ -19,7 +19,7 @@ impl fmt::Display for ValueType {
             ValueType::Float(fl) => write!(f, "{}", fl),
             ValueType::String(s) => write!(f, "{}", s),
             ValueType::Boolean(b) => write!(f, "{}", b),
-            ValueType::Buffer(b) => write!(f, "{:?}", b),
+            ValueType::Buffer(b) => write!(f, "{}", b),
             ValueType::Variable(v) => write!(f, "{}", v),
         }
     }
@@ -216,6 +216,7 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, String> {
                     i += 1;
 
                     bufs.push(buffer_name.clone());
+                    println!("Buffer: {}", ValueType::Buffer(buffer_name.clone()));
 
                     let instruction = Instruction {
                         kind: InstructionKind::Alc,
@@ -246,6 +247,7 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, String> {
                             if vars.iter().find(|&b| b == &var_name).is_none() {
                                 return Err(format!("Variable {} not found", var_name));
                             }
+                            vars.remove(vars.iter().position(|x| x == &var_name).unwrap());
                             ValueType::Variable(var_name)
                         },
                         "buffer" => {
@@ -253,6 +255,7 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, String> {
                             if bufs.iter().find(|&b| b == &buffer_name).is_none() {
                                 return Err(format!("Buffer {} not found", buffer_name));
                             }
+                            bufs.remove(bufs.iter().position(|x| x == &buffer_name).unwrap());
                             ValueType::Buffer(buffer_name)
                         },
                         _ => return Err("Expected variable or buffer".to_string()),

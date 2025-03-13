@@ -307,7 +307,6 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                 let len = match a {
                     ValueType::String(s) => s.len(),
                     ValueType::Buffer(b) => {
-                        println!("{}, {:?}", b, bufs);
                         let buf = bufs.get(&b).ok_or("Len: Buffer not found")?.clone();
                         buf.size
                     },
@@ -341,7 +340,6 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                     ptr,
                 };
 
-                println!("{}", name);
                 bufs.insert(name, buffer);
             },
         }

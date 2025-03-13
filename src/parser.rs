@@ -216,7 +216,6 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, String> {
                     i += 1;
 
                     bufs.push(buffer_name.clone());
-                    println!("Buffer: {}", ValueType::Buffer(buffer_name.clone()));
 
                     let instruction = Instruction {
                         kind: InstructionKind::Alc,

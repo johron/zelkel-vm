@@ -4,13 +4,21 @@ mod evaluator;
 
 fn main() {
     let code = String::from(r#"
+@print:
+    len
+    rot
+    psh 0
+    dup
+    sys
 @entry:
+    psh ":"
+    run @print
     alc *buffer, 128
     psh *buffer
     len
     rot
     psh 0
-    psh 0
+    dup
     sys
     pop $_
     psh *buffer

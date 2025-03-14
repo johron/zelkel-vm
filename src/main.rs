@@ -2,37 +2,52 @@ mod parser;
 mod lexer;
 mod evaluator;
 
+struct Error {
+    message: String,
+    line: usize,
+    col: usize,
+}
+
+impl std::fmt::Debug for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{} at {}:{}", self.message, self.line, self.col)
+    }
+}
+
+impl Error {
+    fn new(message: String, line: usize, col: usize) -> Self {
+        Self {
+            message,
+            line,
+            col,
+        }
+    }
+}
+
 fn main() {
     let code = String::from(r#"
-@print:
+@entry:
+    psh "Hello, world!\n"
     len
     rot
     psh 1
     dup
     sys
-    ret
-@entry:
-    psh ": "
-    run @print
-    alc *buffer, 128
-    psh *buffer
-    len
-    rot
-    psh 0
-    dup
-    sys
     pop $_
-    psh *buffer
-    typ str
-    psh "\n"
-    sub
-    typ int
 "#);
-    let tokens = lexer::lex(code).expect("Failed to lex");
+    let tokens = lexer::lex(code).unwrap_or_else(|err| {
+        eprintln!("Failed to lex: {:?}", err);
+        std::process::exit(1);
+    });
+    let parsed = parser::parse(tokens).unwrap_or_else(|err| {
+        eprintln!("Failed to parse: {:?}", err);
+        std::process::exit(1);
+    });
+    let evaluated = evaluator::evaluate(parsed).unwrap_or_else(|err| {
+        eprintln!("Failed to evaluate: {:?}", err);
+        std::process::exit(1);
+    });
 
-    let parsed = parser::parse(tokens).expect("Failed to parse");
-
-    let evaluated = evaluator::evaluate(parsed).expect("Failed to evaluate");
     let stack = evaluated.0;
     let code = evaluated.1;
 

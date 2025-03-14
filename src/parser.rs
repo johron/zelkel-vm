@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::fmt;
+use crate::Error;
 use crate::lexer::{Token, TokenValue};
 
 #[derive(Debug, PartialEq, Clone)]
@@ -90,16 +91,16 @@ fn next(tokens: &Vec<Token>, i: usize) -> Option<&Token> {
     Some(tok?)
 }
 
-fn expect<'a>(tokens: &'a Vec<Token>, i: usize, kind: &str) -> Result<&'a Token, String> {
+fn expect<'a>(tokens: &'a Vec<Token>, i: usize, kind: &str) -> Result<&'a Token, Error> {
     let t = current(tokens, i).unwrap();
     if t.kind == kind {
         Ok(t)
     } else {
-        Err(format!("Expected token of kind {}, got {:?}", kind, t))
+        Err(Error::new(format!("Expected token of kind {}, got {:?}", kind, t), t.line, t.col))
     }
 }
 
-pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, String> {
+pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, Error> {
     let mut instrs: Vec<Instruction> = Vec::new();
     let mut i = 0;
 
@@ -124,18 +125,18 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, String> {
                         TokenValue::Identifier(s) if s == "false" => ValueType::Boolean(false),
                         TokenValue::Buffer(s) => {
                             if bufs.iter().find(|&b| b == s).is_none() {
-                                return Err(format!("Variable {} not found", s));
+                                return Err(Error::new(format!("Buffer {} not found", s), t.line, t.col));
                             }
                             ValueType::Buffer(s.to_string())
                         },
                         TokenValue::Variable(s) => {
                             if vars.iter().find(|&b| b == s).is_none() {
-                                return Err(format!("Variable {} not found", s));
+                                return Err(Error::new(format!("Variable {} not found", s), t.line, t.col));
                             }
                             ValueType::Variable(s.to_string())
                         },
                         _ => {
-                            return Err("Invalid value for psh".to_string());
+                            return Err(Error::new(format!("Invalid value for psh: {:?}", value), t.line, t.col));
                         }
                     };
 
@@ -206,7 +207,7 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, String> {
                     i += 1;
                     let buffer_name = expect(&tokens, i, "buffer")?.value.to_string();
                     if bufs.iter().find(|b| &b == &&&buffer_name).is_some() {
-                        return Err(format!("Buffer {} already exists", buffer_name));
+                        return Err(Error::new(format!("Buffer {} already exists", buffer_name), t.line, t.col));
                     }
 
                     i += 1;
@@ -229,7 +230,9 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, String> {
 
                     i += 1;
                     if vars.iter().find(|&b| b == &var_name).is_none() {
-                        vars.push(var_name.clone());
+                        if var_name != "$_" && var_name != "$" {
+                            vars.push(var_name.clone());
+                        }
                     }
 
                     let instruction = Instruction {
@@ -244,7 +247,7 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, String> {
                         "variable" => {
                             let var_name = next_token.value.to_string();
                             if vars.iter().find(|&b| b == &var_name).is_none() {
-                                return Err(format!("Variable {} not found", var_name));
+                                return Err(Error::new(format!("Variable {} not found", var_name), t.line, t.col));
                             }
                             vars.remove(vars.iter().position(|x| x == &var_name).unwrap());
                             ValueType::Variable(var_name)
@@ -252,12 +255,12 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, String> {
                         "buffer" => {
                             let buffer_name = next_token.value.to_string();
                             if bufs.iter().find(|&b| b == &buffer_name).is_none() {
-                                return Err(format!("Buffer {} not found", buffer_name));
+                                return Err(Error::new(format!("Buffer {} not found", buffer_name), t.line, t.col));
                             }
                             bufs.remove(bufs.iter().position(|x| x == &buffer_name).unwrap());
                             ValueType::Buffer(buffer_name)
                         },
-                        _ => return Err("Expected variable or buffer".to_string()),
+                        _ => return Err(Error::new("Expected variable or buffer".to_string(), t.line, t.col)),
                     };
 
                     i += 2;
@@ -280,7 +283,7 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, String> {
                         TokenValue::Identifier(ref s) if s == "ret" => InstructionKind::Ret,
                         TokenValue::Identifier(ref s) if s == "sys" => InstructionKind::Sys,
                         TokenValue::Identifier(ref s) if s == "len" => InstructionKind::Len,
-                        _ => return Err(format!("Invalid instruction: {:?}", t)),
+                        _ => return Err(Error::new(format!("Invalid instruction: {:?}", t), t.line, t.col)),
                     };
 
                     i += 1;
@@ -296,12 +299,12 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, String> {
             "label" => {
                 i += 1;
                 if expect(&tokens, i,"punctuation")?.value.to_string() != ":" {
-                    return Err("Parser: Expected ':' after label".to_string());
+                    return Err(Error::new("Parser: Expected ':' after label".to_string(), t.line, t.col));
                 }
                 i += 1;
 
                 if labels.get(&t.value.to_string()).is_some() {
-                    return Err(format!("Parser: Label {} already exists", t.value.to_string()));
+                    return Err(Error::new(format!("Parser: Label {} already exists", t.value.to_string()), t.line, t.col));
                 }
 
                 labels.insert(t.value.to_string(), instrs.len());
@@ -313,12 +316,12 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, String> {
             "function" => {
                 i += 1;
                 if expect(&tokens, i,"punctuation")?.value.to_string() != ":" {
-                    return Err("Parser: Expected ':' after function".to_string());
+                    return Err(Error::new("Parser: Expected ':' after function".to_string(), t.line, t.col));
                 }
                 i += 1;
 
                 if funcs.get(&t.value.to_string()).is_some() {
-                    return Err(format!("Parser: Function {} already exists", t.value.to_string()));
+                    return Err(Error::new(format!("Parser: Function {} already exists", t.value.to_string()), t.line, t.col));
                 }
 
                 funcs.insert(t.value.to_string(), instrs.len());
@@ -328,13 +331,13 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, String> {
                 });
             },
             _ => {
-                Err(format!("Unexpected token: {:?}", t))?;
+                Err(Error::new(format!("Unexpected token: {:?}", t), t.line, t.col))?;
             }
         }
     }
 
     if funcs.get("@entry").is_none() {
-        return Err("Parser: No @entry function found".to_string());
+        return Err(Error::new("Parser: No @entry function found".to_string(), 0, 0));
     }
 
     Ok(ParserRet {

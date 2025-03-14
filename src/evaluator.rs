@@ -170,7 +170,9 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
             InstructionKind::Pop => {
                 let a = stack.pop().ok_or("Pop: Stack underflow")?;
                 let var_name = instr.params[0].clone().to_string();
-                vars.insert(var_name, a).map(|old| old);
+                if var_name != "$_" && var_name != "$" {
+                    vars.insert(var_name, a).map(|old| old);
+                }
             },
             InstructionKind::Dup => {
                 let a = stack.last().ok_or("Dup: Stack underflow")?.clone();

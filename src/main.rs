@@ -7,11 +7,12 @@ fn main() {
 @print:
     len
     rot
-    psh 0
+    psh 1
     dup
     sys
+    ret
 @entry:
-    psh ":"
+    psh ": "
     run @print
     alc *buffer, 128
     psh *buffer
@@ -23,6 +24,9 @@ fn main() {
     pop $_
     psh *buffer
     typ str
+    psh "\n"
+    sub
+    typ int
 "#);
     let tokens = lexer::lex(code).expect("Failed to lex");
 

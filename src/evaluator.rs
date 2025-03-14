@@ -84,6 +84,9 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                     (ValueType::Float(a), ValueType::Float(b)) => {
                         stack.push(ValueType::Float(a - b));
                     },
+                    (ValueType::String(a), ValueType::String(b)) => {
+                        stack.push(ValueType::String(b.replace(&a, "")));
+                    },
 
                     _ => return Err(format!("Invalid types for sub {:?} {:?}", a_clone, b_clone)),
                 }

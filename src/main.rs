@@ -10,14 +10,14 @@ struct Error {
 
 impl std::fmt::Debug for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{} at {}:{}", self.message, self.line, self.col)
+        write!(f, "{} near {}:{}", self.message, self.line, self.col)
     }
 }
 
 impl Error {
-    fn new(message: String, line: usize, col: usize) -> Self {
+    fn new<S: Into<String>>(message: S, line: usize, col: usize) -> Self {
         Self {
-            message,
+            message: message.into(),
             line,
             col,
         }
@@ -27,13 +27,8 @@ impl Error {
 fn main() {
     let code = String::from(r#"
 @entry:
-    psh "Hello, world!\n"
-    len
-    rot
-    psh 1
-    dup
-    sys
-    pop $_
+    psh "hei"
+    typ int
 "#);
     let tokens = lexer::lex(code).unwrap_or_else(|err| {
         eprintln!("Failed to lex: {:?}", err);

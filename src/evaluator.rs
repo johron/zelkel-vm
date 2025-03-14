@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use crate::parser::{ValueType, InstructionKind, ParserRet};
 use syscalls;
+use crate::Error;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Buffer {
@@ -20,7 +21,7 @@ fn trim_vec(buf: Vec<u8>) -> Vec<u8> {
     trimmed
 }
 
-pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
+pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), Error> {
     let instrs = parsed.instrs;
     let labels = parsed.labels;
     let funcs = parsed.funcs;
@@ -31,15 +32,15 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
     let mut stack: Vec<ValueType> = Vec::new();
     let mut ret_stack: Vec<usize> = Vec::new();
 
-    let mut cur = *funcs.get("@entry").ok_or("Entry function not found")?;
+    let mut cur = *funcs.get("@entry").ok_or(Error::new("Entry function not found", 0, 0))?;
 
     while cur < instrs.len() {
-        let instr = instrs.get(cur).ok_or("Instruction not found")?;
+        let instr = instrs.get(cur).ok_or(Error::new("Instruction not found", 0, 0))?;
         match instr.kind {
             InstructionKind::Psh => {
                 for param in &instr.params {
                     if let ValueType::Variable(var_name) = param {
-                        let var = vars.get(var_name).ok_or("Push: Variable not found")?;
+                        let var = vars.get(var_name).ok_or(Error::new("Push: Variable not found", instr.line, instr.col))?;
                         stack.push(var.clone());
                 } else {
                         stack.push(param.clone());
@@ -47,14 +48,14 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                 }
             }
             InstructionKind::Rot => {
-                let a = stack.pop().ok_or("Rot: Stack underflow")?.clone();
-                let b = stack.pop().ok_or("Rot: Stack underflow")?.clone();
+                let a = stack.pop().ok_or(Error::new("Rot: Stack underflow", instr.line, instr.col))?.clone();
+                let b = stack.pop().ok_or(Error::new("Rot: Stack underflow", instr.line, instr.col))?.clone();
                 stack.push(a);
                 stack.push(b);
             },
             InstructionKind::Add => {
-                let a = stack.pop().ok_or("Add: Stack underflow")?.clone();
-                let b = stack.pop().ok_or("Add: Stack underflow")?.clone();
+                let a = stack.pop().ok_or(Error::new("Add: Stack underflow", instr.line, instr.col))?.clone();
+                let b = stack.pop().ok_or(Error::new("Add: Stack underflow", instr.line, instr.col))?.clone();
                 let a_clone = a.clone();
                 let b_clone = b.clone();
 
@@ -69,11 +70,12 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                         stack.push(ValueType::String(format!("{}{}", b, a)));
                     },
 
-                    _ => return Err(format!("Invalid types for add {:?} {:?}", a_clone, b_clone)),                        }
+                    _ => return Err(Error::new(format!("Invalid types for add {:?} {:?}", a_clone, b_clone), instr.line, instr.col)),
+                }
             },
             InstructionKind::Sub => {
-                let a = stack.pop().ok_or("Sub: Stack underflow")?.clone();
-                let b = stack.pop().ok_or("Sub: Stack underflow")?.clone();
+                let a = stack.pop().ok_or(Error::new("Sub: Stack underflow", instr.line, instr.col))?.clone();
+                let b = stack.pop().ok_or(Error::new("Sub: Stack underflow", instr.line, instr.col))?.clone();
                 let a_clone = a.clone();
                 let b_clone = b.clone();
 
@@ -88,12 +90,12 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                         stack.push(ValueType::String(b.replace(&a, "")));
                     },
 
-                    _ => return Err(format!("Invalid types for sub {:?} {:?}", a_clone, b_clone)),
+                    _ => return Err(Error::new(format!("Invalid types for sub {:?} {:?}", a_clone, b_clone), instr.line, instr.col)),
                 }
             },
             InstructionKind::Mul => {
-                let a = stack.pop().ok_or("Mul: Stack underflow")?.clone();
-                let b = stack.pop().ok_or("Mul: Stack underflow")?.clone();
+                let a = stack.pop().ok_or(Error::new("Mul: Stack underflow", instr.line, instr.col))?.clone();
+                let b = stack.pop().ok_or(Error::new("Mul: Stack underflow", instr.line, instr.col))?.clone();
                 let a_clone = a.clone();
                 let b_clone = b.clone();
 
@@ -108,12 +110,12 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                     (ValueType::String(a), ValueType::Integer(b)) | (ValueType::Integer(b), ValueType::String(a)) => {
                         stack.push(ValueType::String(a.repeat(b as usize)));
                     },
-                    _ => return Err(format!("Invalid types for mul {:?} {:?}", a_clone, b_clone)),
+                    _ => return Err(Error::new(format!("Invalid types for mul {:?} {:?}", a_clone, b_clone), instr.line, instr.col)),
                 }
             },
             InstructionKind::Div => {
-                let a = stack.pop().ok_or("Div: Stack underflow")?.clone();
-                let b = stack.pop().ok_or("Div: Stack underflow")?.clone();
+                let a = stack.pop().ok_or(Error::new("Div: Stack underflow", instr.line, instr.col))?.clone();
+                let b = stack.pop().ok_or(Error::new("Div: Stack underflow", instr.line, instr.col))?.clone();
                 let a_clone = a.clone();
                 let b_clone = b.clone();
 
@@ -125,12 +127,12 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                         stack.push(ValueType::Float(a / b));
                     },
 
-                    _ => return Err(format!("Invalid types for div {:?} {:?}", a_clone, b_clone)),
+                    _ => return Err(Error::new(format!("Invalid types for div {:?} {:?}", a_clone, b_clone), instr.line, instr.col)),
                 }
             },
             InstructionKind::Mod => {
-                let a = stack.pop().ok_or("Mod: Stack underflow")?.clone();
-                let b = stack.pop().ok_or("Mod: Stack underflow")?.clone();
+                let a = stack.pop().ok_or(Error::new("Mod: Stack underflow", instr.line, instr.col))?.clone();
+                let b = stack.pop().ok_or(Error::new("Mod: Stack underflow", instr.line, instr.col))?.clone();
                 let a_clone = a.clone();
                 let b_clone = b.clone();
 
@@ -142,12 +144,12 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                         stack.push(ValueType::Float(a % b));
                     },
 
-                    _ => return Err(format!("Invalid types for mod {:?} {:?}", a_clone, b_clone)),
+                    _ => return Err(Error::new(format!("Invalid types for mod {:?} {:?}", a_clone, b_clone), instr.line, instr.col)),
                 }
             },
             InstructionKind::Cmp => {
-                let a = stack.pop().ok_or("Equal: Stack underflow")?.clone();
-                let b = stack.pop().ok_or("Equal: Stack underflow")?.clone();
+                let a = stack.pop().ok_or(Error::new("Equal: Stack underflow", instr.line, instr.col))?.clone();
+                let b = stack.pop().ok_or(Error::new("Equal: Stack underflow", instr.line, instr.col))?.clone();
                 let a_clone = a.clone();
                 let b_clone = b.clone();
 
@@ -164,65 +166,65 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                     (ValueType::Boolean(a), ValueType::Boolean(b)) => {
                         stack.push(ValueType::Boolean(a == b));
                     },
-                    _ => return Err(format!("Invalid types for equal {:?} {:?}", a_clone, b_clone)),
+                    _ => return Err(Error::new(format!("Invalid types for equal {:?} {:?}", a_clone, b_clone), instr.line, instr.col)),
                 }
             }
             InstructionKind::Pop => {
-                let a = stack.pop().ok_or("Pop: Stack underflow")?;
+                let a = stack.pop().ok_or(Error::new("Pop: Stack underflow", instr.line, instr.col))?;
                 let var_name = instr.params[0].clone().to_string();
                 if var_name != "$_" && var_name != "$" {
                     vars.insert(var_name, a).map(|old| old);
                 }
             },
             InstructionKind::Dup => {
-                let a = stack.last().ok_or("Dup: Stack underflow")?.clone();
+                let a = stack.last().ok_or(Error::new("Dup: Stack underflow", instr.line, instr.col))?.clone();
                 stack.push(a);
             },
             InstructionKind::Jmp => {
                 let label = instr.params[0].clone();
-                let i = labels.get(&label.to_string()).ok_or("Jump: Label not found")?;
+                let i = labels.get(&label.to_string()).ok_or(Error::new("Jump: Label not found", instr.line, instr.col))?;
                 cur = *i;
             }
             InstructionKind::Jnz => {
                 let label = instr.params[0].clone();
-                let i = labels.get(&label.to_string()).ok_or("Jnz: Label not found")? - 1;
-                let a = stack.pop().ok_or("Jnz: Stack underflow")?.clone();
+                let i = labels.get(&label.to_string()).ok_or(Error::new("Jnz: Label not found", instr.line, instr.col))? - 1;
+                let a = stack.pop().ok_or(Error::new("Jnz: Stack underflow", instr.line, instr.col))?.clone();
                 match a {
                     ValueType::Integer(n) => if n != 0 { cur = i; },
                     ValueType::Float(n) => if n != 0.0 { cur = i; },
                     ValueType::String(n) => if n != "" { cur = i; },
                     ValueType::Boolean(n) => if n { cur = i; },
-                    _ => return Err("Jnz: Invalid type".to_string()),
+                    _ => return Err(Error::new("Jnz: Invalid type".to_string(), instr.line, instr.col)),
                 }
             },InstructionKind::Jzr => {
                 let label = instr.params[0].clone();
-                let i = labels.get(&label.to_string()).ok_or("Jzr: Label not found")? - 1;
-                let a = stack.pop().ok_or("Jzr: Stack underflow")?.clone();
+                let i = labels.get(&label.to_string()).ok_or(Error::new("Jzr: Label not found", instr.line, instr.col))? - 1;
+                let a = stack.pop().ok_or(Error::new("Jzr: Stack underflow", instr.line, instr.col))?.clone();
                 match a {
                     ValueType::Integer(n) => if n == 0 { cur = i; },
                     ValueType::Float(n) => if n == 0.0 { cur = i; },
                     ValueType::String(n) => if n == "" { cur = i; },
                     ValueType::Boolean(n) => if !n { cur = i; },
-                    _ => return Err("Jzr: Invalid type".to_string()),
+                    _ => return Err(Error::new("Jzr: Invalid type".to_string(), instr.line, instr.col)),
                 }
             },
             InstructionKind::Type => {
                 let label = match instr.params[0].clone() {
                     ValueType::String(s) => s,
-                    _ => return Err("Type: Invalid type".to_string()),
+                    _ => return Err(Error::new("Type: Invalid type".to_string(), instr.line, instr.col)),
                 };
-                let a = match stack.pop().ok_or("Type: Stack underflow")?.clone() {
+                let a = match stack.pop().ok_or(Error::new("Type: Stack underflow", instr.line, instr.col))?.clone() {
                     ValueType::String(s) => s,
                     ValueType::Integer(i) => i.to_string(),
                     ValueType::Float(f) => f.to_string(),
                     ValueType::Boolean(b) => b.to_string(),
                     ValueType::Buffer(b) => {
-                        let buf = bufs.get(&b).ok_or("Type: Buffer not found")?.clone();
+                        let buf = bufs.get(&b).ok_or(Error::new("Type: Buffer not found", instr.line, instr.col))?.clone();
                         let vec = ptr_to_vec(buf);
                         let trimmed_vec = trim_vec(vec);
                         String::from_utf8(trimmed_vec).unwrap()
                     },
-                    _ => return Err("Type: Invalid type".to_string()),
+                    _ => return Err(Error::new("Type: Invalid type".to_string(), instr.line, instr.col)),
                 };
 
                 let res = match label {
@@ -231,24 +233,24 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                             Ok(i) => ValueType::Integer(i),
                             Err(_) => match a.parse::<bool>() {
                                 Ok(b) => ValueType::Integer(b as i32),
-                                Err(_) => return Err("Type: Invalid int or bool".to_string()),
+                                Err(_) => return Err(Error::new("Type: Invalid int or bool".to_string(), instr.line, instr.col)),
                             },
                         }
                     },
                     s if s == "float" => {
                         match a.parse::<f32>() {
                             Ok(f) => ValueType::Float(f),
-                            Err(_) => return Err("Type: Invalid float".to_string()),
+                            Err(_) => return Err(Error::new("Type: Invalid float".to_string(), instr.line, instr.col)),
                         }
                     },
                     s if s == "str" => ValueType::String(a),
                     s if s == "bool" => {
                         match a.parse::<bool>() {
                             Ok(b) => ValueType::Boolean(b),
-                            Err(_) => return Err("Type: Invalid bool".to_string()),
+                            Err(_) => return Err(Error::new("Type: Invalid bool".to_string(), instr.line, instr.col)),
                         }
                     },
-                    _ => return Err("Type: Invalid type".to_string()),
+                    _ => return Err(Error::new("Type: Invalid type".to_string(), instr.line, instr.col)),
                 };
 
                 stack.push(res);
@@ -257,19 +259,19 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                 if let Some(i) = ret_stack.pop() {
                     cur = i;
                 } else {
-                    let a = stack.pop().ok_or("Ret: Stack underflow")?;
-                    return Ok((stack, a.to_int()?));
+                    let a = stack.pop().ok_or(Error::new("Ret: Stack underflow", instr.line, instr.col))?;
+                    return Ok((stack, a.to_int().map_err(|e| Error::new(e, instr.line, instr.col))?));
                 }
             },
             InstructionKind::Run => {
                 let func = instr.params[0].clone();
-                let i = funcs.get(&func.to_string()).ok_or("Run: Function not found")?;
+                let i = funcs.get(&func.to_string()).ok_or(Error::new("Run: Function not found", instr.line, instr.col))?;
                 ret_stack.push(cur);
                 cur = *i;
 
             },
             InstructionKind::Sys => {
-                let syscall_number = stack.pop().ok_or("Sys: Stack underflow")?.clone();
+                let syscall_number = stack.pop().ok_or(Error::new("Sys: Stack underflow", instr.line, instr.col))?.clone();
                 let mut args = Vec::new();
 
                 for _ in 0..6 {
@@ -290,7 +292,7 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                                 s.as_ptr() as usize
                             },
                             ValueType::Buffer(b) => {
-                                let buf = bufs.get(b).ok_or("Sys: Buffer not found").unwrap().clone();
+                                let buf = bufs.get(b).ok_or(Error::new("Sys: Buffer not found", instr.line, instr.col)).unwrap().clone();
                                 buf.ptr
                             },
                             ValueType::Variable(v) => {
@@ -302,20 +304,20 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                         let result = unsafe { syscalls::syscall(syscalls::Sysno::from(num as u32), &syscall_args) };
                         result
                     },
-                    _ => return Err("Sys: Invalid syscall number type".to_string()),
+                    _ => return Err(Error::new("Sys: Invalid syscall number type".to_string(), instr.line, instr.col)),
                 };
 
                 stack.push(ValueType::Integer(result.unwrap() as i32));
             },
             InstructionKind::Len => {
-                let a = stack.last().ok_or("Len: Stack underflow")?.clone();
+                let a = stack.last().ok_or(Error::new("Len: Stack underflow", instr.line, instr.col))?.clone();
                 let len = match a {
                     ValueType::String(s) => s.len(),
                     ValueType::Buffer(b) => {
-                        let buf = bufs.get(&b).ok_or("Len: Buffer not found")?.clone();
+                        let buf = bufs.get(&b).ok_or(Error::new("Len: Buffer not found", instr.line, instr.col))?.clone();
                         buf.size
                     },
-                    _ => return Err("Len: Invalid type".to_string()),
+                    _ => return Err(Error::new("Len: Invalid type".to_string(), instr.line, instr.col)),
                 };
                 stack.push(ValueType::Integer(len as i32));
             },
@@ -328,14 +330,14 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), String> {
                     ValueType::Variable(v) => {
                         vars.remove(&v);
                     },
-                    _ => return Err("Dlc: Invalid type".to_string()),
+                    _ => return Err(Error::new("Dlc: Invalid type".to_string(), instr.line, instr.col)),
                 };
             }
             InstructionKind::Lbl => {}
             InstructionKind::Fun => {}
             InstructionKind::Alc => {
                 let name = instr.params[0].clone().to_string();
-                let size = instr.params[1].to_int()? as usize;
+                let size = instr.params[1].to_int().map_err(|e| Error::new(e, instr.line, instr.col))? as usize;
                 let mut data = vec![0u8; size];
                 let ptr = data.as_mut_ptr() as usize;
 

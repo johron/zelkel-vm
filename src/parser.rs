@@ -69,6 +69,8 @@ pub enum InstructionKind {
 pub struct Instruction {
     pub kind: InstructionKind,
     pub params: Vec<ValueType>,
+    pub line: usize,
+    pub col: usize,
 }
 
 #[derive(Debug)]
@@ -145,6 +147,8 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, Error> {
                     let instruction = Instruction {
                         kind: InstructionKind::Psh,
                         params: vec![value],
+                        line: t.line,
+                        col: t.col,
                     };
 
                     instrs.push(instruction);
@@ -156,6 +160,8 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, Error> {
                     let instruction = Instruction {
                         kind: InstructionKind::Jmp,
                         params: vec![ValueType::String(label.clone())],
+                        line: t.line,
+                        col: t.col,
                     };
 
                     instrs.push(instruction);
@@ -167,6 +173,8 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, Error> {
                     let instruction = Instruction {
                         kind: InstructionKind::Jnz,
                         params: vec![ValueType::String(label.clone())],
+                        line: t.line,
+                        col: t.col,
                     };
 
                     instrs.push(instruction);
@@ -178,6 +186,8 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, Error> {
                     let instruction = Instruction {
                         kind: InstructionKind::Jzr,
                         params: vec![ValueType::String(label.clone())],
+                        line: t.line,
+                        col: t.col,
                     };
 
                     instrs.push(instruction);
@@ -189,6 +199,8 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, Error> {
                     let instruction = Instruction {
                         kind: InstructionKind::Type,
                         params: vec![ValueType::String(ident.clone())],
+                        line: t.line,
+                        col: t.col,
                     };
 
                     instrs.push(instruction);
@@ -200,6 +212,8 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, Error> {
                     let instruction = Instruction {
                         kind: InstructionKind::Run,
                         params: vec![ValueType::String(func.clone())],
+                        line: t.line,
+                        col: t.col,
                     };
 
                     instrs.push(instruction);
@@ -221,6 +235,8 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, Error> {
                     let instruction = Instruction {
                         kind: InstructionKind::Alc,
                         params: vec![ValueType::Buffer(buffer_name.clone()), ValueType::Integer(buffer_size)],
+                        line: t.line,
+                        col: t.col,
                     };
 
                     instrs.push(instruction);
@@ -238,6 +254,8 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, Error> {
                     let instruction = Instruction {
                         kind: InstructionKind::Pop,
                         params: vec![ValueType::Variable(var_name.clone())],
+                        line: t.line,
+                        col: t.col,
                     };
 
                     instrs.push(instruction);
@@ -267,6 +285,8 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, Error> {
                     let instruction = Instruction {
                         kind: InstructionKind::Dlc,
                         params: vec![value],
+                        line: t.line,
+                        col: t.col,
                     };
 
                     instrs.push(instruction);
@@ -291,6 +311,8 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, Error> {
                     let instruction = Instruction {
                         kind,
                         params: vec![],
+                        line: t.line,
+                        col: t.col,
                     };
 
                     instrs.push(instruction);
@@ -311,6 +333,8 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, Error> {
                 instrs.push(Instruction {
                     kind: InstructionKind::Lbl,
                     params: vec![ValueType::String(t.value.to_string())],
+                    line: t.line,
+                    col: t.col,
                 });
             },
             "function" => {
@@ -328,6 +352,8 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, Error> {
                 instrs.push(Instruction {
                     kind: InstructionKind::Fun,
                     params: vec![ValueType::String(t.value.to_string())],
+                    line: t.line,
+                    col: t.col,
                 });
             },
             _ => {

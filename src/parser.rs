@@ -94,11 +94,13 @@ fn next(tokens: &Vec<Token>, i: usize) -> Option<&Token> {
 }
 
 fn expect<'a>(tokens: &'a Vec<Token>, i: usize, kind: &str) -> Result<&'a Token, Error> {
-    let t = current(tokens, i).unwrap();
+    let t = current(tokens, i).ok_or(
+        Error::new(format!("Unexpected end of input while expecting token of kind '{}'", kind), tokens.last().unwrap().line, tokens.last().unwrap().col)
+    )?;
     if t.kind == kind {
         Ok(t)
     } else {
-        Err(Error::new(format!("Expected token of kind {}, got {:?}", kind, t), t.line, t.col))
+        Err(Error::new(format!("Expected token of kind '{}', got '{:?}'", kind, t), t.line, t.col))
     }
 }
 
@@ -321,12 +323,12 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, Error> {
             "label" => {
                 i += 1;
                 if expect(&tokens, i,"punctuation")?.value.to_string() != ":" {
-                    return Err(Error::new("Parser: Expected ':' after label".to_string(), t.line, t.col));
+                    return Err(Error::new("Expected ':' after label".to_string(), t.line, t.col));
                 }
                 i += 1;
 
                 if labels.get(&t.value.to_string()).is_some() {
-                    return Err(Error::new(format!("Parser: Label {} already exists", t.value.to_string()), t.line, t.col));
+                    return Err(Error::new(format!("Label {} already exists", t.value.to_string()), t.line, t.col));
                 }
 
                 labels.insert(t.value.to_string(), instrs.len());
@@ -340,12 +342,12 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, Error> {
             "function" => {
                 i += 1;
                 if expect(&tokens, i,"punctuation")?.value.to_string() != ":" {
-                    return Err(Error::new("Parser: Expected ':' after function".to_string(), t.line, t.col));
+                    return Err(Error::new("Expected ':' after function".to_string(), t.line, t.col));
                 }
                 i += 1;
 
                 if funcs.get(&t.value.to_string()).is_some() {
-                    return Err(Error::new(format!("Parser: Function {} already exists", t.value.to_string()), t.line, t.col));
+                    return Err(Error::new(format!("Function {} already exists", t.value.to_string()), t.line, t.col));
                 }
 
                 funcs.insert(t.value.to_string(), instrs.len());
@@ -363,7 +365,7 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, Error> {
     }
 
     if funcs.get("@entry").is_none() {
-        return Err(Error::new("Parser: No @entry function found".to_string(), 0, 0));
+        return Err(Error::new("No @entry function found".to_string(), 0, 0));
     }
 
     Ok(ParserRet {

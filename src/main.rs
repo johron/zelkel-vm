@@ -27,8 +27,13 @@ impl Error {
 fn main() {
     let code = String::from(r#"
 @entry:
-    psh "hei"
-    typ int
+    psh "Hello, world!\n"
+    len
+    rot
+    psh 1
+    dup
+    sys
+    pop $
 "#);
     let tokens = lexer::lex(code).unwrap_or_else(|err| {
         eprintln!("Failed to lex: {:?}", err);

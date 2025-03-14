@@ -1,8 +1,8 @@
 # Zelkel Runtime
-- Virtual machine runtime for Zelkel programming language
+- Virtual machine runtime for the Zelkel programming language
 
 ## Todo
-- [x] Move buffers to be defined and stuff in the evaluator like variables are, so i can deallocate them with `dlc`, also allocate variables with `alc` and deallocate them with `alc` (mabye)
+- [ ] Add <> tags for debugging so that the compiler can add tags for where this is written in the source, debug symbols? Example: <src/main.zk:1:1>
 
 ## License
 Licensed under the MIT License; please see the [license file](LICENSE.md) for terms.

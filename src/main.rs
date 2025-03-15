@@ -49,7 +49,7 @@ impl Error {
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
-    let mut path: &String = &"test.zk".to_string();
+    let mut path: &String = &"test.zvm".to_string();
     if args.len() >= 2 {
         path = &args[1];
     }

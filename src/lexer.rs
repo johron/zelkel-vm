@@ -118,8 +118,15 @@ pub fn lex(input: String) -> Result<Vec<Token>, Error> {
         } else if c == '"' {
             let value = until(&chars, cur + 1, |c| c != '"');
             let string_value = value.0;
-            cur = value.1 + 1;
-            col += string_value.len() + 2;
+            cur = value.1;
+            col += string_value.len();
+
+            if cur >= chars.len() || chars[cur] != '"' {
+                Err(Error::new("Unterminated string".to_owned(), line, col))?;
+            }
+
+            cur += 1;
+            col += 1;
 
             tokens.push(Token { kind: "string", value: TokenValue::String(string_value), line, col });
         } else if could_be(c, ":,") {

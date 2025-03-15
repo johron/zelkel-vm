@@ -28,12 +28,7 @@ fn main() {
     let code = String::from(r#"
 @entry:
     psh "Hello, world!\n"
-    len
-    rot
-    psh 1
-    dup
-    sys
-    pop $
+    psh 0
 "#);
     let tokens = lexer::lex(code).unwrap_or_else(|err| {
         eprintln!("Failed to lex: {:?}", err);

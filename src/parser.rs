@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::fmt;
 use crate::Error;
-use crate::lexer::{Token, TokenValue};
+use crate::lexer::{DebugSymbol, Token, TokenValue};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum ValueType {
@@ -11,6 +11,7 @@ pub enum ValueType {
     Boolean(bool),
     Buffer(String),
     Variable(String),
+    DebugSymbol(DebugSymbol),
 }
 
 impl fmt::Display for ValueType {
@@ -22,6 +23,7 @@ impl fmt::Display for ValueType {
             ValueType::Boolean(b) => write!(f, "{}", b),
             ValueType::Buffer(b) => write!(f, "{}", b),
             ValueType::Variable(v) => write!(f, "{}", v),
+            ValueType::DebugSymbol(ds) => write!(f, "{}:{}:{}", ds.path, ds.line, ds.col),
         }
     }
 }
@@ -35,6 +37,14 @@ impl ValueType {
             ValueType::Boolean(b) => Ok(*b as i32),
             ValueType::Buffer(_) => Err("Cannot convert buffer to int".to_string()),
             ValueType::Variable(_) => Err("Cannot convert variable to int".to_string()),
+            ValueType::DebugSymbol(_) => Err("Cannot convert debug symbol to int".to_string()),
+        }
+    }
+
+    pub fn as_debug_symbol(&self) -> Result<DebugSymbol, String> {
+        match self {
+            ValueType::DebugSymbol(ds) => Ok(ds.clone()),
+            _ => Err("Expected debug symbol".to_owned()),
         }
     }
 }
@@ -63,6 +73,7 @@ pub enum InstructionKind {
     Fun,
     Dlc,
     Alc,
+    DebugSymbol,
 }
 
 #[derive(Debug, PartialEq)]
@@ -95,12 +106,12 @@ fn next(tokens: &Vec<Token>, i: usize) -> Option<&Token> {
 
 fn expect<'a>(tokens: &'a Vec<Token>, i: usize, kind: &str) -> Result<&'a Token, Error> {
     let t = current(tokens, i).ok_or(
-        Error::new(format!("Unexpected end of input while expecting token of kind '{}'", kind), tokens.last().unwrap().line, tokens.last().unwrap().col)
+        Error::new(format!("Unexpected end of input while expecting token of kind '{}'", kind), tokens.last().unwrap().line, tokens.last().unwrap().col, &None)
     )?;
     if t.kind == kind {
         Ok(t)
     } else {
-        Err(Error::new(format!("Expected token of kind '{}', got '{:?}'", kind, t), t.line, t.col))
+        Err(Error::new(format!("Expected token of kind '{}', got '{:?}'", kind, t), t.line, t.col, &None))
     }
 }
 
@@ -129,18 +140,18 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, Error> {
                         TokenValue::Identifier(s) if s == "false" => ValueType::Boolean(false),
                         TokenValue::Buffer(s) => {
                             if bufs.iter().find(|&b| b == s).is_none() {
-                                return Err(Error::new(format!("Buffer {} not found", s), t.line, t.col));
+                                return Err(Error::new(format!("Buffer {} not found", s), t.line, t.col, &None));
                             }
                             ValueType::Buffer(s.to_string())
                         },
                         TokenValue::Variable(s) => {
                             if vars.iter().find(|&b| b == s).is_none() {
-                                return Err(Error::new(format!("Variable {} not found", s), t.line, t.col));
+                                return Err(Error::new(format!("Variable {} not found", s), t.line, t.col, &None));
                             }
                             ValueType::Variable(s.to_string())
                         },
                         _ => {
-                            return Err(Error::new(format!("Invalid value for psh: {:?}", value), t.line, t.col));
+                            return Err(Error::new(format!("Invalid value for psh: {:?}", value), t.line, t.col, &None));
                         }
                     };
 
@@ -223,7 +234,7 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, Error> {
                     i += 1;
                     let buffer_name = expect(&tokens, i, "buffer")?.value.to_string();
                     if bufs.iter().find(|b| &b == &&&buffer_name).is_some() {
-                        return Err(Error::new(format!("Buffer {} already exists", buffer_name), t.line, t.col));
+                        return Err(Error::new(format!("Buffer {} already exists", buffer_name), t.line, t.col, &None));
                     }
 
                     i += 1;
@@ -267,7 +278,7 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, Error> {
                         "variable" => {
                             let var_name = next_token.value.to_string();
                             if vars.iter().find(|&b| b == &var_name).is_none() {
-                                return Err(Error::new(format!("Variable {} not found", var_name), t.line, t.col));
+                                return Err(Error::new(format!("Variable {} not found", var_name), t.line, t.col, &None));
                             }
                             vars.remove(vars.iter().position(|x| x == &var_name).unwrap());
                             ValueType::Variable(var_name)
@@ -275,12 +286,12 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, Error> {
                         "buffer" => {
                             let buffer_name = next_token.value.to_string();
                             if bufs.iter().find(|&b| b == &buffer_name).is_none() {
-                                return Err(Error::new(format!("Buffer {} not found", buffer_name), t.line, t.col));
+                                return Err(Error::new(format!("Buffer {} not found", buffer_name), t.line, t.col, &None));
                             }
                             bufs.remove(bufs.iter().position(|x| x == &buffer_name).unwrap());
                             ValueType::Buffer(buffer_name)
                         },
-                        _ => return Err(Error::new("Expected variable or buffer".to_string(), t.line, t.col)),
+                        _ => return Err(Error::new("Expected variable or buffer".to_string(), t.line, t.col, &None)),
                     };
 
                     i += 2;
@@ -305,7 +316,7 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, Error> {
                         TokenValue::Identifier(ref s) if s == "ret" => InstructionKind::Ret,
                         TokenValue::Identifier(ref s) if s == "sys" => InstructionKind::Sys,
                         TokenValue::Identifier(ref s) if s == "len" => InstructionKind::Len,
-                        _ => return Err(Error::new(format!("Invalid instruction: {:?}", t), t.line, t.col)),
+                        _ => return Err(Error::new(format!("Invalid instruction: {:?}", t), t.line, t.col, &None)),
                     };
 
                     i += 1;
@@ -323,12 +334,12 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, Error> {
             "label" => {
                 i += 1;
                 if expect(&tokens, i,"punctuation")?.value.to_string() != ":" {
-                    return Err(Error::new("Expected ':' after label".to_string(), t.line, t.col));
+                    return Err(Error::new("Expected ':' after label".to_string(), t.line, t.col, &None));
                 }
                 i += 1;
 
                 if labels.get(&t.value.to_string()).is_some() {
-                    return Err(Error::new(format!("Label {} already exists", t.value.to_string()), t.line, t.col));
+                    return Err(Error::new(format!("Label {} already exists", t.value.to_string()), t.line, t.col, &None));
                 }
 
                 labels.insert(t.value.to_string(), instrs.len());
@@ -342,12 +353,12 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, Error> {
             "function" => {
                 i += 1;
                 if expect(&tokens, i,"punctuation")?.value.to_string() != ":" {
-                    return Err(Error::new("Expected ':' after function".to_string(), t.line, t.col));
+                    return Err(Error::new("Expected ':' after function".to_string(), t.line, t.col, &None));
                 }
                 i += 1;
 
                 if funcs.get(&t.value.to_string()).is_some() {
-                    return Err(Error::new(format!("Function {} already exists", t.value.to_string()), t.line, t.col));
+                    return Err(Error::new(format!("Function {} already exists", t.value.to_string()), t.line, t.col, &None));
                 }
 
                 funcs.insert(t.value.to_string(), instrs.len());
@@ -358,14 +369,23 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, Error> {
                     col: t.col,
                 });
             },
+            "debugsymbol" => {
+                i += 1;
+                instrs.push(Instruction {
+                    kind: InstructionKind::DebugSymbol,
+                    params: vec![ValueType::DebugSymbol(t.value.as_debug_symbol().unwrap())],
+                    line: t.line,
+                    col: t.col,
+                })
+            }
             _ => {
-                Err(Error::new(format!("Unexpected token: {:?}", t), t.line, t.col))?;
+                Err(Error::new(format!("Unexpected token: {:?}", t), t.line, t.col, &None))?;
             }
         }
     }
 
     if funcs.get("@entry").is_none() {
-        return Err(Error::new("No @entry function found".to_string(), 0, 0));
+        return Err(Error::new("No @entry function found".to_string(), 0, 0, &None));
     }
 
     Ok(ParserRet {

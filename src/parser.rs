@@ -71,7 +71,7 @@ pub enum InstructionKind {
     Len,
     Lbl,
     Fun,
-    Dlc,
+    Fre,
     Alc,
     DebugSymbol,
 }
@@ -296,7 +296,7 @@ pub fn parse(tokens: Vec<Token>) -> Result<ParserRet, Error> {
 
                     i += 2;
                     let instruction = Instruction {
-                        kind: InstructionKind::Dlc,
+                        kind: InstructionKind::Fre,
                         params: vec![value],
                         line: t.line,
                         col: t.col,

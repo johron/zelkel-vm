@@ -326,7 +326,7 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), Error> {
                 };
                 stack.push(ValueType::Integer(len as i32));
             },
-            InstructionKind::Dlc => {
+            InstructionKind::Fre => {
                 let a = instr.params[0].clone();
                 match a {
                     ValueType::Buffer(b) => {
@@ -335,7 +335,7 @@ pub fn evaluate(parsed: ParserRet) -> Result<(Vec<ValueType>, i32), Error> {
                     ValueType::Variable(v) => {
                         vars.remove(&v);
                     },
-                    _ => return Err(Error::new("Dlc: Invalid type".to_string(), instr.line, instr.col, &current_debug_symbol)),
+                    _ => return Err(Error::new("Fre: Invalid type".to_string(), instr.line, instr.col, &current_debug_symbol)),
                 };
             }
             InstructionKind::Lbl => {}

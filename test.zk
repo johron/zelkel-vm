@@ -9,6 +9,6 @@
     pop $
     psh *buf
     typ str
-    psh "\n"
+    psh "\n" <src/main.zk:4:6>
     sub
     typ int

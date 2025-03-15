@@ -7,6 +7,8 @@ mod evaluator;
 struct Error {
     message: String,
     path: Option<String>,
+    dsline: Option<usize>,
+    dscol: Option<usize>,
     line: usize,
     col: usize,
 }
@@ -14,7 +16,7 @@ struct Error {
 impl std::fmt::Debug for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         if let Some(path) = &self.path {
-            write!(f, "{} near {}:{}:{}", self.message, path, self.line, self.col)
+            write!(f, "{} near {}:{}:{} ({}:{})", self.message, path, self.dsline.unwrap(), self.dscol.unwrap(), self.line, self.col)
         } else {
             write!(f, "{} near {}:{}", self.message, self.line, self.col)
         }
@@ -27,13 +29,17 @@ impl Error {
             Self {
                 message: message.into(),
                 path: Some(ds.clone().path),
-                line: ds.line,
-                col: ds.col,
+                dsline: Some(ds.line),
+                dscol: Some(ds.col),
+                line,
+                col,
             }
         } else {
             Self {
                 message: message.into(),
                 path: None,
+                dsline: None,
+                dscol: None,
                 line,
                 col,
             }
@@ -50,15 +56,15 @@ fn main() {
     let code = std::fs::read_to_string(path).expect("Failed to read the file");
 
     let tokens = lexer::lex(code).unwrap_or_else(|err| {
-        eprintln!("Failed to lex: {:?}", err);
+        eprintln!("Runtime error: Failed to lex: {:?}", err);
         std::process::exit(1);
     });
     let parsed = parser::parse(tokens).unwrap_or_else(|err| {
-        eprintln!("Failed to parse: {:?}", err);
+        eprintln!("Runtime error: Failed to parse: {:?}", err);
         std::process::exit(1);
     });
     let evaluated = evaluator::evaluate(parsed).unwrap_or_else(|err| {
-        eprintln!("Failed to evaluate: {:?}", err);
+        eprintln!("Runtime error: Failed to evaluate: {:?}", err);
         std::process::exit(1);
     });
 

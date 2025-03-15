@@ -42,12 +42,13 @@ impl Error {
 }
 
 fn main() {
-    let code = String::from(r#"
-@entry: <src/main.zk:1:0>
-    psh 12
-    psh "hi"
-    add
-"#);
+    let args: Vec<String> = std::env::args().collect();
+    let mut path: &String = &"test.zk".to_string();
+    if args.len() >= 2 {
+        path = &args[1];
+    }
+    let code = std::fs::read_to_string(path).expect("Failed to read the file");
+
     let tokens = lexer::lex(code).unwrap_or_else(|err| {
         eprintln!("Failed to lex: {:?}", err);
         std::process::exit(1);

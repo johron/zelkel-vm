@@ -91,7 +91,7 @@ pub fn lex(input: String) -> Result<Vec<Token>, Error> {
     let mut tokens: Vec<Token> = vec![];
     let mut cur = 0;
 
-    let mut line = 0;
+    let mut line = 1;
     let mut col = 0;
 
     while cur < chars.len() {

@@ -1,0 +1,14 @@
+@entry:
+    alc *buf, 128
+    psh *buf
+    len
+    rot
+    psh 0
+    dup
+    sys
+    pop $
+    psh *buf
+    typ str
+    psh "\n"
+    sub
+    typ int

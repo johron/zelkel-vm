@@ -1,5 +1,5 @@
 # Zelkel Runtime
-- Virtual machine runtime for the Zelkel programming language
+- Virtual machine runtime for the [Zelkel programming language](https://githjub.com/johron/zelkel)
 
 ## Documentation
 - `@function:`: Defines a function, '@entry' is the entry point.

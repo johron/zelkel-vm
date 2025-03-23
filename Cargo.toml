@@ -1,5 +1,5 @@
 [package]
-name = "zelkel-runtime"
+name = "zelkel-vm"
 version = "1.0.0"
 edition = "2021"
 

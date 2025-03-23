@@ -3,7 +3,7 @@
 
 ## Documentation
 - `@function:`: Defines a function, '@entry' is the entry point.
-- `.label`: Defines a label for a section of code
+- `.label:`: Defines a label for a section of code
 - `alc *buffer, size`: Allocates a buffer of the specified size.
 - `fre *buffer`: Frees a buffer or variable.
 - `psh value`: Pushes a value onto the stack.
@@ -18,9 +18,10 @@
 - `mul`: Multiplies the top two items on the stack.
 - `div`: Divides the top two items on the stack.
 - `mod`: Modulus of the top two items on the stack.
-- `jmp`: Jumps to a label.
-- `jnz`: Jumps to a label if the top item on the stack is not zero.
-- `jzr`: Jumps to a label if the top item on the stack is zero.
+- `jmp .label`: Jumps to a label.
+- `jnz .label`: Jumps to a label if the top item on the stack is not zero.
+- `jzr .label`: Jumps to a label if the top item on the stack is zero.
+- `run @function`: Run a function, requires ret to end it
 - `cmp`: Compares the top two items on the stack.
 - `ret`: Returns from a function.
 - `<path:line:column>`: Defines a source location for debugging.

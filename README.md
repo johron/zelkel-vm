@@ -1,4 +1,4 @@
-# Zelkel Runtime
+# Zelkel VM
 - Virtual machine runtime for the [Zelkel programming language](https://github.com/johron/zelkel)
 
 ## Documentation

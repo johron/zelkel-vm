@@ -27,4 +27,4 @@
 - `<path:line:column>`: Defines a source location for debugging.
 
 ## License
-Licensed under the MIT License; please see the [license file](LICENSE.md) for terms.
+Licensed under the MIT License; please see the [license file](LICENSE) for terms.
